@@ -25,7 +25,7 @@ export async function updateNote(req, res) {
   const { noteId } = req.params
   
   try {
-    const updatedCard = await Note.findByIdAndDelete(noteId, {
+    const updatedCard = await Note.findByIdAndUpdate(noteId, {
       $set: req.body
     },
       {

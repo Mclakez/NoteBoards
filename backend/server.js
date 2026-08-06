@@ -4,6 +4,8 @@ import { initDB } from './config/db.js'
 import { noteRouter } from './routes/noteRoutes.js'
 import { noteCanvasRouter } from './routes/noteCanvasRoutes.js'
 import { authRouter } from './routes/authRoutes.js'
+import { boardCardRouter } from './routes/boardCardRoutes.js'
+import { boardCanvasRouter } from './routes/boardCanvasRoutes.js'
 import cookieParser from 'cookie-parser'
 
 
@@ -16,8 +18,10 @@ app.use(express.json())
 app.use(cookieParser())
 
 app.use('/api/noteCard', noteRouter)
+app.use('/api/boardCard', boardCardRouter)
 app.use('/api/auth', authRouter)
 app.use('/api/noteCanvas', noteCanvasRouter)
+app.use('/api/boardCanvas', boardCanvasRouter)
 
 app.get('/', (req, res) => {
   res.json({ message: 'NoteBoards API running' })

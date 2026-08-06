@@ -1,11 +1,15 @@
-import { NoteCanvas } from "../models/NoteCanvas.js";
-import { Note } from "../models/NoteCard.js";
+import { BoardCanvas } from "../models/BoardCanvas.js";
+import { BoardCard } from "../models/BoardCard.js";
 
 
 export async function getAllCanvas(req, res) {
   const userId = req.user.userId
   try {
-    const userCanvas = await NoteCanvas.find({ userId })
+    const userCanvas = await BoardCanvas.find({ userId })
+
+    if (!userCanvas) {
+      res.status(404).json({message: "No Canvas found"})
+    }
 
     res.status(200).json(userCanvas)
   } catch (error) {
@@ -16,9 +20,8 @@ export async function getAllCanvas(req, res) {
 export async function getCanvas(req, res) {
   const { id } = req.params
   try {
-    const canvas = await NoteCanvas.findById(id)
-    if (!canvas) return res.status(404).json({ message: "Canvas not found" })
-    const notes = await Note.find({ canvasId: id })
+    const canvas = await BoardCanvas.findById(id)
+    const notes = await BoardCard.find({ canvasId: id })
 
     res.status(200).json({
       canvas,
@@ -34,7 +37,7 @@ export async function addCanvas(req, res) {
   const { title } = req.body
 
   try {
-    const newCanvas = await NoteCanvas.create({
+    const newCanvas = await BoardCanvas.create({
       userId,
       title,
       pinned: false
@@ -42,7 +45,7 @@ export async function addCanvas(req, res) {
 
     res.status(200).json({
       id: newCanvas._id,
-      title: newCanvas.title
+      newCanvas
     })
   } catch (error) {
     res.status(500).json({message: "Server error", error: error.message})
@@ -53,14 +56,14 @@ export async function updateCanvas(req, res) {
   const { id } = req.params
 
   try {
-    const updatedCanvas = await NoteCanvas.findByIdAndUpdate(id,{
+    const updatedCanvas = await BoardCanvas.findByIdAndUpdate(id,{
       $set: req.body
     }, {
       new: true,
     })
 
     if (!updatedCanvas) {
-      res.status(404).json({message: "User not Found"})
+      res.status(500).json({message: "User not Found"})
     }
 
     res.status(200).json(updatedCanvas)
@@ -73,9 +76,9 @@ export async function deleteCanvas(req, res) {
   const { id } = req.params
 
   try {
-    const deletedCanvas = await NoteCanvas.findByIdAndDelete(id)
+    const deletedCanvas = await BoardCanvas.findByIdAndDelete(id)
 
-    if (!deletedCanvas) return res.status(404).json({ error: "Canvas not found" })
+    if (!deletedCanvas) return res.status(401).json({ error: "Canvas not found" })
     res.status(200).json({
         message: "Canvas deleted successfully",
         deletedCanvas
