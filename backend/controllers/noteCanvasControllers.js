@@ -22,7 +22,7 @@ export async function getCanvas(req, res) {
   const { id } = req.params
   try {
     const canvas = await NoteCanvas.findById(id)
-    const notes = await Notes.find({ canvasId: id })
+    const notes = await Note.find({ canvasId: id })
 
     res.status(200).json({
       canvas,
@@ -73,7 +73,7 @@ export async function updateCanvas(req, res) {
   }
 }
 
-export async function deleteCanvas() {
+export async function deleteCanvas(req, res) {
   const { id } = req.params
 
   try {

@@ -32,11 +32,11 @@ export async function updateNote(req, res) {
       new: true
     })
 
-    if (!deletedCard) return res.status(401).json({ error: "Canvas not found" })
+    if (!updatedCard) return res.status(401).json({ error: "Card not found" })
 
     res.status(200).json({
       message: "Note sucessfully updated",
-      newCard
+      updatedCard
     })
 
     
@@ -50,7 +50,7 @@ export async function deleteNote(req, res) {
   
   try {
     const deletedCard = await Note.findByIdAndDelete(noteId)
-    if (!deletedCard) return res.status(401).json({ error: "Canvas not found" })
+    // if (!deletedCard) return res.status(401).json({ error: "Card not found" })
 
     res.status(200).json({
       message: "Note sucessfully deleted",
