@@ -4,10 +4,38 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="./css/global.css">
+    <link rel="stylesheet" href="./css/landing.css">
+    <script type="module" defer></script>
     <title>NoteBoards</title>
   </head>
   <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <div class="header-wrapper">
+        <header>
+        <img src="./images/NoteBoards.png">
+        <nav>
+            <ul>
+                <li><a href="./login.html">Login</a></li>
+                <li><button class="create_acc_btn"><a  href="./register.html">Create an account</a></button></li>
+            </ul>
+        </nav>
+    </header>
+    </div>
+
+    <main>
+        <article>
+            <h1>Capture. Pin. Create. Ideate</h1>
+            <p>Your memories and ideas deserve a home as unique as they are.</p>
+            <button class="start_btn"><a  href="./register.html">Start your board</a></button>
+        </article>
+
+        <section>
+            <img src="./images/Desktop - 4.png">
+        </section>
+
+        <section>
+            <img src="./images/Desktop - 10.png">
+        </section>
+    </main>
   </body>
 </html>

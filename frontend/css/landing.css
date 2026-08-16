@@ -1,0 +1,138 @@
+@font-face {
+  font-family: "Geist";
+  src: url("../fonts/Geist-VariableFont_wght.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+}
+
+
+img {
+    max-width: 100%;
+}
+
+.header-wrapper {
+    background-color: #FFFE88;
+    width: 100%;
+}
+
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #FFFE88;
+    padding: 2rem 2rem;
+    max-width: 1500px;
+    margin: 0 auto;
+}
+
+header img {
+    width: 7rem;
+}
+
+header ul {
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    text-transform: uppercase;
+}
+
+header ul li a {
+    text-decoration: none;
+    font-family: "Geist", sans-serif;
+    cursor: pointer;
+    color: #030303;
+}
+
+main {
+    text-align: center;
+    max-width: 1500px;
+    margin: 4rem auto 0;
+}
+
+article {
+    padding-right: 1rem;
+    padding-left: 1rem;
+}
+
+
+h1 {
+    text-align: center;
+}
+
+.create_acc_btn {
+    padding: 1rem 2rem;
+    background-color: #030303;
+    color: white;
+    border-radius: 100vw;
+    cursor: pointer;
+    border: none;
+}
+
+.create_acc_btn a {
+    color: inherit;
+    text-transform: uppercase;
+}
+
+.create_acc_btn:hover {
+    filter: brightness(1.5);
+}
+
+p {
+    font-family: "Geist", sans-serif;
+    margin-bottom: 2rem;
+}
+
+.start_btn {
+    padding: 1rem 3rem;
+    background-color: #030303;
+    color: white;
+    border-radius: 100vw;
+    cursor: pointer;
+    border: none;
+}
+
+.start_btn:hover {
+    filter: brightness(1.5);
+}
+
+.start_btn a {
+    text-decoration: none;
+    color: white;
+    font-family: "Geist", sans-serif;
+}
+
+section {
+    max-width: 80%;
+    margin: 6rem auto;
+    border-radius: 1rem;
+    overflow: hidden;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+section:nth-child(2) {
+    margin-top: 3rem;
+}
+
+@media (max-width: 490px) {
+    header{
+        padding: 2rem 1rem;
+    }
+    header img {
+    width: 5rem;
+}
+
+header ul {  
+    gap: 1rem;
+}
+
+header ul li a {
+    font-size: 0.8rem;
+}
+
+
+.create_acc_btn {
+    padding: 1rem 1.5rem;
+}
+
+}

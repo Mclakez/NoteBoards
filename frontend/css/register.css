@@ -1,0 +1,15 @@
+body {
+    background-color: #FFFE88;
+}
+
+header {
+    
+    padding: 2rem 2rem;
+    max-width: 1500px;
+    margin: 0 auto;
+}
+
+header img {
+    width: 7rem;
+}
+

@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <link rel="stylesheet" href="./css/global.css" />
+        <link rel="stylesheet" href="./css/dashboard.css" />
+        <link rel="stylesheet" href="./css/modal.css" />
+        <script defer src="./js/dashboard.js"></script>
+        <title>Boards | NoteBoards</title>
+    </head>
+<body class="dashboard-page" data-dashboard="board">
+    <header class="dashboard-header">
+        <a href="./index.html"><img src="./images/NoteBoards.png" alt="NoteBoards" /></a>
+        <nav aria-label="Main navigation">
+            <a href="./notes.html">Notes</a>
+            <a class="active" href="./boards.html">Boards</a>
+            <button class="avatar" aria-label="User profile">AF</button>
+        </nav>
+    </header>
+<main class="dashboard">
+    <div class="dashboard-bar">
+        <h1><span aria-hidden="true">♙</span> Pinned Boards</h1>
+        <button class="create-button" type="button"><span>＋</span>Create Board</button>
+    </div>
+    <section class="card-section pinned" aria-label="Pinned boards">
+        <div class="card-grid"></div>
+    </section>
+    <section class="card-section other-section" aria-labelledby="other-boards">
+        <h2 id="other-boards">Others</h2>
+        <div class="card-grid"></div>
+    </section>
+</main>
+    <div class="toast" role="status" aria-live="polite"></div></body></html>
