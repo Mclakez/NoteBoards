@@ -3,6 +3,10 @@ body {
     overflow: hidden;
 }
 
+h1 {
+    user-select: none;
+}
+
 button {
     border: none;
     cursor: default;
@@ -73,8 +77,12 @@ article button {
     position: absolute;
     cursor: pointer;
     filter: drop-shadow(0 6px 14px rgba(0,0,0,0.10));
+    height: 200px;
+    width: 200px;
     min-width: 250px;
     min-height: 200px;
+    display: flex;
+    flex-direction: column;
 }
 
 .note_card {
@@ -93,6 +101,18 @@ article button {
     word-break: break-word;
     cursor: text;
     box-sizing: border-box;
+    flex: 1;
+    border: none;
+    outline: none;
+    box-shadow: none;
+    caret-color: #111;
+}
+
+.note_content:focus,
+.note_content:focus-visible {
+    outline: none;
+    border: 1px solid rgba(24, 160, 251, 0.7);
+    box-shadow: 0 0 0 2px rgba(24, 160, 251, 0.15);
 }
 
 
@@ -100,6 +120,7 @@ article button {
     display: flex;
     justify-content: space-between;
     background-color: #cb0000;
+    height: 42px;
     padding: 0.5rem 1rem;
     width: 100%;
 }
@@ -170,4 +191,8 @@ article button {
     height: 100vh;
     overflow: scroll; /* clips canvas edges */
     
+}
+
+.delete_btn, .index_btn {
+    user-select: none;
 }

@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Infinite Canvas — Fully Commented</title>
+<style>
+  /* ================================================================
+     1. THE VIEWPORT (Screen Space)
+     This is your window into the world. overflow:hidden clips
+     anything outside. user-select:none prevents text selection
+     while dragging.
+     ================================================================ */
+  .canvas-container {
+    position: relative;
+    width: 100%;
+    height: 420px;
+    background: #0d1117;
+    border-radius: 12px;
+    overflow: hidden;
+    font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+    user-select: none;
+    cursor: grab;
+  }
+  .canvas-container:active { cursor: grabbing; }
+
+  /* ================================================================
+     2. THE WORLD (World Space)
+     Absolutely positioned. Its transform is updated by JS to project
+     world coordinates onto the screen. transform-origin: 0 0 means
+     scaling happens from the top-left corner, which simplifies math.
+     will-change: transform hints the browser to optimize compositing.
+     ================================================================ */
+  .world {
+    position: absolute;
+    transform-origin: 0 0;
+    will-change: transform;
+  }
+
+  /* ================================================================
+     3. THE GRID
+     A CSS-repeating pattern. In a real infinite canvas, you'd draw
+     grid lines procedurally in the render loop so they extend forever
+     without creating a massive DOM element.
+     ================================================================ */
+  .grid {
+    position: absolute;
+    top: 0; left: 0;
+    width: 4000px; height: 4000px;
+    background-image:
+      linear-gradient(rgba(48,54,61,0.4) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(48,54,61,0.4) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  /* ================================================================
+     4. OBJECTS
+     Positioned in WORLD coordinates (left, top). The camera transform
+     on .world automatically projects them to screen space.
+     ================================================================ */
+  .object {
+    position: absolute;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 600; color: white;
+    cursor: grab;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  }
+  .object:active { cursor: grabbing; }
+  .obj-rect   { background: linear-gradient(135deg, #6366f1, #8b5cf6); }
+  .obj-circle { background: linear-gradient(135deg, #10b981, #059669); border-radius: 50%; }
+  .obj-card   { background: linear-gradient(135deg, #f59e0b, #d97706); }
+  .obj-text   { background: linear-gradient(135deg, #ef4444, #dc2626); }
+
+  /* ================================================================
+     5. ORIGIN MARKER & AXES
+     Visual reference for world (0,0). The axes span the entire
+     4000×4000 world. In a real app, these would be drawn dynamically.
+     ================================================================ */
+  .origin {
+    position: absolute; width: 12px; height: 12px;
+    background: #f43f5e; border-radius: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 0 3px rgba(244,63,94,0.3);
+  }
+  .axis-x { position: absolute; height: 1px; width: 4000px;
+            top: 2000px; left: 0; background: rgba(244,63,94,0.4); }
+  .axis-y { position: absolute; width: 1px; height: 4000px;
+            left: 2000px; top: 0; background: rgba(244,63,94,0.4); }
+
+  /* ================================================================
+     6. UI OVERLAYS (Screen Space, NOT transformed by camera)
+     These sit on top with z-index. They display camera state and
+     provide controls. They are in screen coordinates, not world.
+     ================================================================ */
+  .info {
+    position: absolute; top: 12px; left: 12px; z-index: 10;
+    background: rgba(22,27,34,0.9); backdrop-filter: blur(8px);
+    padding: 10px 14px; border-radius: 10px;
+    border: 1px solid rgba(48,54,61,0.6);
+    color: #c9d1d9; font-size: 12px; line-height: 1.6;
+    font-family: 'SF Mono', ui-monospace, monospace; min-width: 180px;
+  }
+  .info span { color: #58a6ff; }
+  .info .label { color: #8b949e; }
+
+  .controls {
+    position: absolute; bottom: 12px; left: 12px; right: 12px;
+    display: flex; gap: 8px; align-items: center; z-index: 10;
+    background: rgba(22,27,34,0.9); backdrop-filter: blur(8px);
+    padding: 10px 14px; border-radius: 10px;
+    border: 1px solid rgba(48,54,61,0.6);
+  }
+  .controls button {
+    background: #21262d; border: 1px solid rgba(48,54,61,0.8);
+    color: #c9d1d9; padding: 6px 12px; border-radius: 6px;
+    font-size: 13px; cursor: pointer; transition: all 0.15s;
+    font-family: inherit;
+  }
+  .controls button:hover { background: #30363d; color: #fff; }
+  .controls button:active { transform: scale(0.96); }
+
+  .hint {
+    position: absolute; bottom: 68px; left: 50%;
+    transform: translateX(-50%); z-index: 10; pointer-events: none;
+    background: rgba(22,27,34,0.85); color: #8b949e;
+    padding: 6px 14px; border-radius: 20px; font-size: 12px;
+    border: 1px solid rgba(48,54,61,0.4);
+  }
+
+  /* ================================================================
+     7. MINIMAP
+     A scaled-down view of the entire world. The world is 4000px,
+     the minimap is 120px, so scale = 120/4000 = 0.03.
+     The blue rectangle shows the camera's current viewport.
+     ================================================================ */
+  .minimap {
+    position: absolute; top: 12px; right: 12px;
+    width: 120px; height: 120px; z-index: 10;
+    background: rgba(22,27,34,0.9);
+    border: 1px solid rgba(48,54,61,0.6); border-radius: 8px;
+    overflow: hidden;
+  }
+  .minimap-world {
+    position: absolute; width: 4000px; height: 4000px;
+    transform-origin: 0 0;
+  }
+  .minimap-grid {
+    position: absolute; width: 100%; height: 100%;
+    background-image:
+      linear-gradient(rgba(48,54,61,0.3) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(48,54,61,0.3) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+  .minimap-viewport {
+    position: absolute;
+    border: 2px solid #58a6ff;
+    background: rgba(88,166,255,0.1);
+    border-radius: 2px;
+  }
+  .minimap-obj {
+    position: absolute; border-radius: 2px; opacity: 0.7;
+  }
+</style>
+</head>
+<body style="margin:0; padding:20px; background:#111;">
+
+<!-- ================================================================
+     HTML STRUCTURE
+     Two layers:
+     1. .world — transformed by camera, contains all canvas content
+     2. Overlays — fixed in screen space, not transformed
+     ================================================================ -->
+<div class="canvas-container" id="canvasContainer">
+
+  <!-- Info panel: live camera telemetry -->
+  <div class="info">
+    <div><span class="label">Camera X:</span> <span id="camX">0</span></div>
+    <div><span class="label">Camera Y:</span> <span id="camY">0</span></div>
+    <div><span class="label">Zoom:</span> <span id="camZoom">1.00x</span></div>
+    <div><span class="label">Visible:</span> <span id="visibleCount">0</span> objs</div>
+  </div>
+
+  <!-- Minimap: bird's-eye view -->
+  <div class="minimap" id="minimap">
+    <div class="minimap-world" id="minimapWorld">
+      <div class="minimap-grid"></div>
+    </div>
+    <div class="minimap-viewport" id="minimapViewport"></div>
+  </div>
+
+  <!-- THE WORLD: everything here is in world coordinates -->
+  <div class="world" id="world">
+    <div class="grid"></div>
+    <div class="axis-x"></div>
+    <div class="axis-y"></div>
+    <div class="origin"></div>
+    <!-- Objects injected by JS -->
+  </div>
+
+  <div class="hint">🖱️ Drag to pan · Scroll to zoom · Drag objects to move</div>
+
+  <!-- Toolbar -->
+  <div class="controls">
+    <button onclick="resetView()">Reset View</button>
+    <button onclick="zoomIn()">Zoom In</button>
+    <button onclick="zoomOut()">Zoom Out</button>
+    <button onclick="addRandomObject()">+ Add Object</button>
+    <button onclick="clearObjects()">Clear All</button>
+    <div style="margin-left:auto; color:#8b949e; font-size:12px;">
+      World: 4000×4000px | Objects: <span id="totalCount">0</span>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =================================================================
+   SECTION A: CAMERA STATE
+   The camera looks down at the world from above.
+   - x, y: where the camera is centered in world space
+   - zoom: magnification (1.0 = 100%, 0.5 = 50%, 2.0 = 200%)
+   ================================================================= */
+let camera = { x: 1800, y: 1800, zoom: 0.6 };
+
+/* =================================================================
+   SECTION B: INTERACTION STATE
+   We track whether the user is panning the camera or dragging an
+   object. These are mutually exclusive.
+   ================================================================= */
+let isPanning = false;
+let panStart = { x: 0, y: 0 };      // Mouse pos when pan started
+let cameraStart = { x: 0, y: 0 };   // Camera pos when pan started
+
+let isDraggingObj = false;
+let dragObj = null;                 // Object being dragged
+let dragOffset = { x: 0, y: 0 };    // Offset from mouse to object corner
+
+/* =================================================================
+   SECTION C: SCENE DATA
+   All objects live in this array in WORLD coordinates.
+   Each object: { type, x, y, w, h, label, id }
+   ================================================================= */
+let objects = [];
+let objectIdCounter = 0;
+
+const container = document.getElementById('canvasContainer');
+const world     = document.getElementById('world');
+const minimapWorld = document.getElementById('minimapWorld');
+const minimapViewport = document.getElementById('minimapViewport');
+
+/* =================================================================
+   SECTION D: INITIAL OBJECTS
+   Placed in world space around the center (2000, 2000).
+   ================================================================= */
+const initialObjects = [
+  { type: 'rect',   x: 1950, y: 1950, w: 120, h: 80,  label: 'Frame A' },
+  { type: 'circle', x: 2150, y: 2000, w: 100, h: 100, label: 'Node 1' },
+  { type: 'card',   x: 2050, y: 2150, w: 140, h: 90,  label: 'Card B' },
+  { type: 'text',   x: 1900, y: 2100, w: 100, h: 40,  label: 'Title' },
+  { type: 'rect',   x: 2250, y: 1900, w: 100, h: 100, label: 'Frame C' },
+  { type: 'circle', x: 1850, y: 1850, w: 80,  h: 80,  label: 'Node 2' },
+  { type: 'card',   x: 2100, y: 1850, w: 120, h: 60,  label: 'Card D' },
+  { type: 'rect',   x: 2300, y: 2100, w: 90,  h: 70,  label: 'Frame E' },
+  { type: 'text',   x: 1950, y: 2250, w: 120, h: 50,  label: 'Subtitle' },
+  { type: 'circle', x: 2200, y: 2250, w: 70,  h: 70,  label: 'Node 3' },
+];
+
+/* =================================================================
+   SECTION E: DOM CREATION
+   We create two DOM elements per object:
+   1. A full-size element inside .world
+   2. A tiny element inside the minimap
+   Both use the SAME world coordinates — only CSS scale differs.
+   ================================================================= */
+function createObjectElement(obj) {
+  const el = document.createElement('div');
+  el.className = 'object obj-' + obj.type;
+  el.style.left = obj.x + 'px';
+  el.style.top  = obj.y + 'px';
+  el.style.width  = obj.w + 'px';
+  el.style.height = obj.h + 'px';
+  el.textContent = obj.label;
+  el.dataset.id = obj.id;
+  return el;
+}
+
+function createMinimapObject(obj) {
+  const el = document.createElement('div');
+  el.className = 'minimap-obj obj-' + obj.type;
+  el.style.left = obj.x + 'px';
+  el.style.top  = obj.y + 'px';
+  el.style.width  = obj.w + 'px';
+  el.style.height = obj.h + 'px';
+  return el;
+}
+
+/* =================================================================
+   SECTION F: ADD / REMOVE OBJECTS
+   When adding, we push to the array and create DOM nodes for both
+   the main view and the minimap.
+   ================================================================= */
+function addObject(objData) {
+  const obj = { ...objData, id: objectIdCounter++ };
+  objects.push(obj);
+  world.appendChild(createObjectElement(obj));
+  minimapWorld.appendChild(createMinimapObject(obj));
+  updateInfo();
+}
+
+function addRandomObject() {
+  const types = ['rect', 'circle', 'card', 'text'];
+  const type = types[Math.floor(Math.random() * types.length)];
+  addObject({
+    type,
+    x: 1600 + Math.random() * 800,
+    y: 1600 + Math.random() * 800,
+    w: 60 + Math.random() * 100,
+    h: 40 + Math.random() * 80,
+    label: 'Obj ' + (objectIdCounter + 1)
+  });
+}
+
+function clearObjects() {
+  objects.forEach(obj => {
+    const el = world.querySelector('[data-id="' + obj.id + '"]');
+    if (el) el.remove();
+  });
+  minimapWorld.querySelectorAll('.minimap-obj').forEach(el => el.remove());
+  objects = [];
+  objectIdCounter = 0;
+  updateInfo();
+}
+
+// Initialize
+initialObjects.forEach(addObject);
+
+/* =================================================================
+   SECTION G: THE CAMERA TRANSFORM (THE HEART OF THE CANVAS)
+
+   This implements the projection from world space to screen space.
+
+   The formula:
+     screenX = (worldX - camera.x) * zoom + canvasWidth/2
+     screenY = (worldY - camera.y) * zoom + canvasHeight/2
+
+   We rewrite this as a CSS transform on .world:
+     translate(tx, ty) scale(zoom)
+
+   where:
+     tx = -camera.x * zoom + canvasWidth/2
+     ty = -camera.y * zoom + canvasHeight/2
+
+   Why this works:
+   - translate shifts the world so (camera.x, camera.y) lands at
+     the center of the viewport
+   - scale magnifies everything uniformly
+   - transform-origin: 0 0 means scaling happens from top-left,
+     keeping our math simple
+
+   This is exactly how Figma works, just using CSS instead of WebGL.
+   ================================================================= */
+function updateTransform() {
+  const cw = container.clientWidth;
+  const ch = container.clientHeight;
+
+  // Build the camera projection as a CSS transform string
+  const tx = -camera.x * camera.zoom + cw / 2;
+  const ty = -camera.y * camera.zoom + ch / 2;
+  world.style.transform =
+    'translate(' + tx + 'px, ' + ty + 'px) scale(' + camera.zoom + ')';
+
+  /* ---------------------------------------------------------------
+     MINIMAP UPDATE
+     The minimap shows the entire world scaled to 120px.
+     Scale factor = 120 / 4000 = 0.03
+     The viewport rectangle shows what the camera can see.
+     --------------------------------------------------------------- */
+  const mmScale = 120 / 4000;
+  minimapWorld.style.transform = 'scale(' + mmScale + ')';
+
+  // Viewport bounds in world space
+  const halfW = cw / (2 * camera.zoom);
+  const halfH = ch / (2 * camera.zoom);
+  const viewLeft   = camera.x - halfW;
+  const viewRight  = camera.x + halfW;
+  const viewTop    = camera.y - halfH;
+  const viewBottom = camera.y + halfH;
+
+  // Viewport rectangle on minimap (in minimap pixels)
+  const vpX = viewLeft  * mmScale;
+  const vpY = viewTop   * mmScale;
+  const vpW = (viewRight  - viewLeft) * mmScale;
+  const vpH = (viewBottom - viewTop)  * mmScale;
+
+  minimapViewport.style.left   = vpX + 'px';
+  minimapViewport.style.top    = vpY + 'px';
+  minimapViewport.style.width  = vpW + 'px';
+  minimapViewport.style.height = vpH + 'px';
+
+  /* ---------------------------------------------------------------
+     CULLING (VISIBILITY CHECK)
+     Count how many objects intersect the camera's viewport.
+     In a real app with 10,000+ objects, use a Quadtree or R-tree.
+     Here we do a simple AABB intersection test.
+     --------------------------------------------------------------- */
+  let visibleCount = 0;
+  objects.forEach(obj => {
+    const inViewport =
+      obj.x + obj.w > viewLeft  && obj.x < viewRight &&
+      obj.y + obj.h > viewTop   && obj.y < viewBottom;
+    if (inViewport) visibleCount++;
+  });
+
+  // Update telemetry panel
+  document.getElementById('camX').textContent = camera.x.toFixed(0);
+  document.getElementById('camY').textContent = camera.y.toFixed(0);
+  document.getElementById('camZoom').textContent = camera.zoom.toFixed(2) + 'x';
+  document.getElementById('visibleCount').textContent = visibleCount;
+  document.getElementById('totalCount').textContent = objects.length;
+}
+
+function updateInfo() {
+  document.getElementById('totalCount').textContent = objects.length;
+  updateTransform();
+}
+
+/* =================================================================
+   SECTION H: PANNING
+   When clicking empty space, we pan the camera.
+
+   We record:
+   - Where the mouse was when panning started
+   - Where the camera was when panning started
+
+   On mousemove, we calculate delta in SCREEN pixels, divide by zoom
+   to get WORLD pixels, and subtract from the starting camera position.
+   This feels like "grabbing the world and pulling it."
+   ================================================================= */
+container.addEventListener('mousedown', (e) => {
+  // Ignore clicks on UI overlays
+  if (e.target.closest('.controls') || e.target.closest('.minimap')) return;
+
+  // If clicking an object, enter object-drag mode
+  if (e.target.classList.contains('object')) {
+    isDraggingObj = true;
+    dragObj = objects.find(o => o.id == e.target.dataset.id);
+
+    // Convert mouse to world coordinates
+    const rect = container.getBoundingClientRect();
+    const mouseWorldX = (e.clientX - rect.left - container.clientWidth/2)
+                        / camera.zoom + camera.x;
+    const mouseWorldY = (e.clientY - rect.top - container.clientHeight/2)
+                        / camera.zoom + camera.y;
+
+    // Remember offset so object doesn't snap to corner
+    dragOffset.x = mouseWorldX - dragObj.x;
+    dragOffset.y = mouseWorldY - dragObj.y;
+    e.target.style.zIndex = 100;
+    return;
+  }
+
+  // Start panning the camera
+  isPanning = true;
+  panStart = { x: e.clientX, y: e.clientY };
+  cameraStart = { x: camera.x, y: camera.y };
+  container.style.cursor = 'grabbing';
+});
+
+window.addEventListener('mousemove', (e) => {
+  // --- OBJECT DRAGGING ---
+  if (isDraggingObj && dragObj) {
+    const rect = container.getBoundingClientRect();
+    // screen → world conversion
+    const mouseWorldX = (e.clientX - rect.left - container.clientWidth/2)
+                        / camera.zoom + camera.x;
+    const mouseWorldY = (e.clientY - rect.top - container.clientHeight/2)
+                        / camera.zoom + camera.y;
+
+    dragObj.x = mouseWorldX - dragOffset.x;
+    dragObj.y = mouseWorldY - dragOffset.y;
+
+    // Update main view DOM
+    const el = world.querySelector('[data-id="' + dragObj.id + '"]');
+    if (el) {
+      el.style.left = dragObj.x + 'px';
+      el.style.top  = dragObj.y + 'px';
+    }
+
+    // Update minimap DOM
+    const mmEls = minimapWorld.querySelectorAll('.minimap-obj');
+    mmEls.forEach((mmEl, idx) => {
+      if (objects[idx] && objects[idx].id === dragObj.id) {
+        mmEl.style.left = dragObj.x + 'px';
+        mmEl.style.top  = dragObj.y + 'px';
+      }
+    });
+
+    updateTransform();
+    return;
+  }
+
+  // --- CAMERA PANNING ---
+  if (!isPanning) return;
+
+  // Delta in screen pixels → world pixels
+  const dx = (e.clientX - panStart.x) / camera.zoom;
+  const dy = (e.clientY - panStart.y) / camera.zoom;
+
+  // Move camera opposite to drag direction
+  camera.x = cameraStart.x - dx;
+  camera.y = cameraStart.y - dy;
+
+  updateTransform();
+});
+
+window.addEventListener('mouseup', () => {
+  isPanning = false;
+  isDraggingObj = false;
+  dragObj = null;
+  container.style.cursor = '';
+  world.querySelectorAll('.object').forEach(o => o.style.zIndex = '');
+});
+
+/* =================================================================
+   SECTION I: ZOOM-TO-CURSOR (THE MAGIC SCROLL BEHAVIOR)
+
+   This is the single most important UX detail. When you scroll,
+   the point under your mouse must stay under your mouse.
+
+   Algorithm:
+   1. BEFORE zooming, figure out what world point is under the mouse
+   2. Change the zoom level
+   3. AFTER zooming, adjust camera so that same world point
+      projects back to the same screen pixel
+
+   Math:
+     worldX = screenToWorld(mouseX, mouseY)
+     camera.zoom = newZoom
+     camera.x = worldX - (mouseX - cw/2) / newZoom
+     camera.y = worldY - (mouseY - ch/2) / newZoom
+   ================================================================= */
+container.addEventListener('wheel', (e) => {
+  e.preventDefault();
+
+  const rect = container.getBoundingClientRect();
+  const mouseX = e.clientX - rect.left;
+  const mouseY = e.clientY - rect.top;
+  const cw = container.clientWidth;
+  const ch = container.clientHeight;
+
+  // What world point is currently under the mouse?
+  const worldBeforeX = (mouseX - cw/2) / camera.zoom + camera.x;
+  const worldBeforeY = (mouseY - ch/2) / camera.zoom + camera.y;
+
+  // Apply zoom factor
+  const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+  const newZoom = Math.max(0.1, Math.min(5, camera.zoom * zoomFactor));
+
+  // Reposition camera so worldBefore projects back to same screen pixel
+  camera.x = worldBeforeX - (mouseX - cw/2) / newZoom;
+  camera.y = worldBeforeY - (mouseY - ch/2) / newZoom;
+  camera.zoom = newZoom;
+
+  updateTransform();
+}, { passive: false });
+
+/* =================================================================
+   SECTION J: CONTROL BUTTONS
+   ================================================================= */
+function resetView() {
+  camera = { x: 2000, y: 2000, zoom: 0.6 };
+  updateTransform();
+}
+function zoomIn() {
+  camera.zoom = Math.min(5, camera.zoom * 1.2);
+  updateTransform();
+}
+function zoomOut() {
+  camera.zoom = Math.max(0.1, camera.zoom / 1.2);
+  updateTransform();
+}
+
+/* =================================================================
+   SECTION K: MINIMAP NAVIGATION
+   Clicking the minimap teleports the camera to that world point.
+   ================================================================= */
+document.getElementById('minimap').addEventListener('click', (e) => {
+  const rect = document.getElementById('minimap').getBoundingClientRect();
+  const mmX = e.clientX - rect.left;
+  const mmY = e.clientY - rect.top;
+  const mmScale = 120 / 4000;
+  camera.x = mmX / mmScale;
+  camera.y = mmY / mmScale;
+  updateTransform();
+});
+
+/* =================================================================
+   SECTION L: INITIAL RENDER
+   ================================================================= */
+updateTransform();
+</script>
+
+</body>
+</html>

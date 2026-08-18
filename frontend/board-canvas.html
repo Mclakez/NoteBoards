@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="./css/global.css" />
+    <link rel="stylesheet" href="./css/board-canvas.css" />
+    <script type="module" src="./js/boardCanvas.js" defer></script>
+    <title>Board Canvas</title>
+  </head>
+  <body class="board-canvas-page">
+    <header class="board-header">
+      <a class="back-link" href="./boards.html" aria-label="Back to boards">←</a>
+      <div class="board-heading">
+        <h1 id="board-title">Hang your favourite photos</h1>
+        <p>Drag ’n’ drop to rearrange</p>
+      </div>
+      <p class="board-name" id="board-name">My handsome face</p>
+    </header>
+
+    <main class="board-layout">
+
+
+      <section class="board-toolbar" aria-label="Board controls">
+        <div class="palette" aria-label="Board colours">
+          <button class="palette-swatch orange" type="button" data-board-color="orange" aria-label="Use orange board"></button>
+          <button class="palette-swatch sage" type="button" data-board-color="sage" aria-label="Use green board"></button>
+          <button class="palette-swatch blue" type="button" data-board-color="blue" aria-label="Use blue board"></button>
+          <span class="photo-count"><span id="photo-count">0</span>/20</span>
+        </div>
+        <button class="add-photo-button" type="button" aria-label="Add a photo">+</button>
+      </section>
+
+      <section class="photo-board" id="photo-board" aria-label="Photo board">
+        <p class="empty-board-message" id="empty-board-message">Add a photo to start your board.</p>
+      </section>
+    </main>
+
+    <div class="modal-backdrop" id="modal-backdrop" hidden>
+      <section class="photo-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <button class="modal-close" id="modal-close" type="button" aria-label="Close">×</button>
+        <div id="modal-content"></div>
+      </section>
+    </div>
+  </body>
+</html>

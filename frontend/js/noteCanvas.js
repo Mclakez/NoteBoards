@@ -19,45 +19,27 @@ let panStartX, panStartY;
 viewport.scrollLeft = (10000 - window.innerWidth) / 2
 viewport.scrollTop = (10000 - window.innerHeight) / 2
 
-function darkenColor(hex) {
-    let r = parseInt(hex.slice(1, 3), 16)
-    let g = parseInt(hex.slice(3, 5), 16)
-    let b = parseInt(hex.slice(5, 7), 16)
-    r = Math.floor(r * 0.75)
-    g = Math.floor(g * 0.75)
-    b = Math.floor(b * 0.75)
-    return `rgb(${r}, ${g}, ${b})`
-}
-
-
-colorBtns.forEach(colorBtn => {
-    let color = colorBtn.getAttribute('data-color')
-    colorBtn.style.backgroundColor = color
-
-    colorBtn.addEventListener('click', () => {
-        const selected = document.querySelector('.selected')
-        if (selected) {
-            selected.querySelector('.note_content').style.backgroundColor = color
-            selected.querySelector('.note_header').style.backgroundColor = darkenColor(color)
-        }
-    })
-})
-
 addCardBtn.addEventListener('click', createCard)
 
 document.addEventListener("pointerdown", (e) => {
+    const content = e.target.closest('.note_content');
+    if (content) return;
     const card = e.target.closest('.note_wrapper')
     if(!card) return
+    const handle = e.target.closest('.handle');
+    if (handle) {
+        e.stopPropagation();
+        return;
+    }
     if (e.target.closest('button')) return
     isDragging = true
     const rect = card.getBoundingClientRect()
     offsetX = e.clientX - rect.left
     offsetY= e.clientY - rect.top
     currentCard = card
+    currentCard.classList.add('selected')
     card.setPointerCapture(e.pointerId)
-    console.log("card down");
 })
-
 
 viewport.addEventListener('pointerdown', (e) => {
     // Only left-click, and ignore cards / UI buttons
@@ -65,6 +47,10 @@ viewport.addEventListener('pointerdown', (e) => {
     if (e.target.closest('.note_wrapper')) return
     if (e.target.closest('.btns_container')) return
     if (e.target.closest('article')) return
+    const cards = document.querySelectorAll('.note_wrapper')
+    cards.forEach(card => {
+        card.classList.remove('selected')
+    })
 
     isPanning = true
     panStartX = e.clientX
@@ -224,9 +210,13 @@ document.addEventListener('pointerdown', (e) => {
 });
 
 
+
+
+
 function createCard() {
     let card = document.createElement('div')
     card.classList.add('note_wrapper')
+
     card.innerHTML = `
         <div class="note_card">
             <span class="handle top_left"></span>
@@ -244,12 +234,37 @@ function createCard() {
             </div>
 
             <div class="note_content" contenteditable="true">
-
             </div>
         </div>
     `
+
     card.style.left = `${viewport.scrollLeft + window.innerWidth / 2 - 200}px`
     card.style.top = `${viewport.scrollTop + window.innerHeight / 2 - 100}px`
 
     canvas.appendChild(card)
 }
+
+
+function darkenColor(hex) {
+    let r = parseInt(hex.slice(1, 3), 16)
+    let g = parseInt(hex.slice(3, 5), 16)
+    let b = parseInt(hex.slice(5, 7), 16)
+    r = Math.floor(r * 0.75)
+    g = Math.floor(g * 0.75)
+    b = Math.floor(b * 0.75)
+    return `rgb(${r}, ${g}, ${b})`
+}
+
+
+colorBtns.forEach(colorBtn => {
+    let color = colorBtn.getAttribute('data-color')
+    colorBtn.style.backgroundColor = color
+
+    colorBtn.addEventListener('click', () => {
+        const selected = document.querySelector('.selected')
+        if (selected) {
+            selected.querySelector('.note_content').style.backgroundColor = color
+            selected.querySelector('.note_header').style.backgroundColor = darkenColor(color)
+        }
+    })
+})
