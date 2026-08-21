@@ -21,6 +21,7 @@ function setFieldError(input, message = '') {
   const errorElement = getFieldErrorElement(input);
 
   errorElement.textContent = message;
+  //What this means
   input.setAttribute('aria-invalid', String(Boolean(message)));
 }
 
@@ -71,6 +72,7 @@ function togglePasswordVisibility(event) {
 function validateFieldOnBlur(event) {
   const input = event.currentTarget;
   const form = input.form;
+  //What does this mean
   const passwordValue = form.elements.password.value;
 
   setFieldError(input, validateInput(input, passwordValue));

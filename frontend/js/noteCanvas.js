@@ -268,3 +268,54 @@ colorBtns.forEach(colorBtn => {
         }
     })
 })
+
+
+async function saveScreenshot() {
+    const cards = document.querySelectorAll('.note_wrapper')
+    if (cards.length === 0) return
+
+    // find bounding box of all cards
+    let minX = Infinity, minY = Infinity
+    let maxX = -Infinity, maxY = -Infinity
+
+    cards.forEach(card => {
+        const left = parseInt(card.style.left) || 0
+        const top = parseInt(card.style.top) || 0
+        const right = left + card.offsetWidth
+        const bottom = top + card.offsetHeight
+
+        if (left < minX) minX = left
+        if (top < minY) minY = top
+        if (right > maxX) maxX = right
+        if (bottom > maxY) maxY = bottom
+    })
+
+    const padding = 40
+    
+    const screenshotCanvas = await html2canvas(canvas, {
+        x: minX - padding,
+        y: minY - padding,
+        width: (maxX - minX) + padding * 2,
+        height: (maxY - minY) + padding * 2,
+        scale: 0.3,
+        useCORS: true,
+        logging: false  // silence console noise
+    })
+
+    screenshotCanvas.toBlob(async (blob) => {
+        const formData = new FormData()
+        formData.append('thumbnail', blob, 'thumbnail.png')
+
+        try {
+            await api.post(`/canvases/${canvasId}/thumbnail`, formData)
+        } catch (err) {
+            console.error('Thumbnail save failed:', err)
+        }
+    }, 'image/png')
+}
+
+document.querySelector('.back_btn').addEventListener('click', async (e) => {
+    e.preventDefault()
+    await saveScreenshot()
+    window.location.href = 'notes.html'
+})

@@ -5,6 +5,7 @@
 
 .auth-header {
   padding: 2.5rem 3.75rem;
+   background-color: #FFFE88;
 }
 
 .auth-header img {
@@ -57,7 +58,7 @@
 
 .field input {
   width: 100%;
-  min-height: 5.65rem;
+  min-height: 4rem;
   padding: 0 1.6rem;
   border: 1.5px solid #202020;
   border-radius: .8rem;
@@ -117,7 +118,7 @@
 }
 
 .primary-button {
-  min-height: 5.65rem;
+  min-height: 4rem;
   border: 0;
   border-radius: .8rem;
   background: #111;
@@ -125,7 +126,7 @@
   cursor: pointer;
   font: inherit;
   font-size: 1.2rem;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .primary-button:hover, .primary-button:focus-visible {
@@ -152,7 +153,7 @@
   align-items: center;
   justify-content: center;
   gap: 1.2rem;
-  min-height: 5.65rem;
+  min-height: 4rem;
   border: 1.5px solid #202020;
   border-radius: .8rem;
   background: #fff;

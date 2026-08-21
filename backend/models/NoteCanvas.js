@@ -13,7 +13,8 @@ const NoteCanvasSchema = new mongoose.Schema({
   pinned: {
     type: Boolean,
     default: false
-  }
+  },
+  thumbnail_url: { type: String, default: '' }
 }, { timestamps: true })
 
 export const NoteCanvas = mongoose.model("NoteCanvas", NoteCanvasSchema)
