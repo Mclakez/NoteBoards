@@ -4,9 +4,9 @@ import bcrypt from 'bcryptjs'
 
 
 export async function signup(req, res) {
-  console.log(req.body)
-  const { username, password, email } = req.body
+  
   try {
+    const { username, password, email } = req.body
     const existingUser = await User.findOne({ email })
     if (existingUser) {
       res.status(400).json({ message: "Username is already taken" })
@@ -32,26 +32,27 @@ export async function signup(req, res) {
 }
 
 export async function login(req, res) {
-  const { username, password } = req.body
+  
   try {
+    const { username, password } = req.body
     const existingUser = await User.findOne({ username })
     
     if (!existingUser) {
-      res.status(400).json({ message: "Invalid Credentials" })
+      res.status(400).json({ message: "Not an existing user" })
       return
     }
 
     const isPasswordMatch = await bcrypt.compare(password, existingUser.password)
     if (!isPasswordMatch) {
-      res.status(400).json({ message: "Invalid Credentials" })
+      res.status(400).json({ message: "Invalid Password" })
       return
     }
 
-    const token = await generateWebToken(existingUser)
+    const token = generateWebToken(existingUser)
     res.cookie('token', token,{
       httpOnly: true,
-      secure: false,
-      sameSite: 'lax',
+      secure: true,
+      sameSite: 'none',
       maxAge: 7*24*60*60*1000
       
     })
@@ -60,6 +61,7 @@ export async function login(req, res) {
       token,
       username
     })
+    
     
   } catch (error) {
     res.status(500).json({error: error.message})

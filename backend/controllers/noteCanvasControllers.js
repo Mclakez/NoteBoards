@@ -70,9 +70,9 @@ export async function updateCanvas(req, res) {
 }
 
 export async function deleteCanvas(req, res) {
-  const { id } = req.params
-
   try {
+    const { id } = req.params
+    console.log(id)
     const deletedCanvas = await NoteCanvas.findByIdAndDelete(id)
 
     if (!deletedCanvas) return res.status(404).json({ error: "Canvas not found" })

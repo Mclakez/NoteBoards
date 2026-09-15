@@ -1,6 +1,7 @@
 import express from 'express'
 import { addCanvas, deleteCanvas, updateCanvas, getAllCanvas, getCanvas } from '../controllers/noteCanvasControllers.js'
 import { checkJwt } from '../middlewares/auth.js'
+import { upload } from '../config/multer.js'
 
 export const noteCanvasRouter = express.Router()
 
@@ -10,7 +11,7 @@ noteCanvasRouter.post('/', checkJwt, addCanvas)
 noteCanvasRouter.delete('/:id', checkJwt, deleteCanvas)
 noteCanvasRouter.patch('/update/:id', checkJwt, updateCanvas)
 // routes/noteCanvases.js
-router.post('/:id/thumbnail', checkJwt, upload.single('thumbnail'), async (req, res) => {
+noteCanvasRouter.post('/:id/thumbnail', checkJwt, upload.single('thumbnail'), async (req, res) => {
     try {
         const result = await cloudinary.uploader.upload(req.file.path, {
             folder: 'noteboards/thumbnails',

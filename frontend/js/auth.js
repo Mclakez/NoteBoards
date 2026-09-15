@@ -1,3 +1,6 @@
+
+import { api } from "./api.js";
+
 const authToast = document.querySelector('.toast');
 let authToastTimer;
 
@@ -60,8 +63,12 @@ function togglePasswordVisibility(event) {
   const toggleButton = event.currentTarget;
   const passwordInput = toggleButton.previousElementSibling;
   const passwordIsVisible = passwordInput.type === 'text';
+  const toggleImg = toggleButton.querySelector('img')
+  
 
   passwordInput.type = passwordIsVisible ? 'password' : 'text';
+  toggleImg.src = passwordIsVisible ? './images/icons8-eye-50.png' : './images/icons8-closed-eye-50.png'
+  
   toggleButton.setAttribute(
     'aria-label',
     passwordIsVisible ? 'Show password' : 'Hide password'
@@ -102,8 +109,11 @@ function focusFirstInvalidField(form) {
 function redirectToNotes() {
   window.location.href = './notes.html';
 }
+function redirectToLogin() {
+  window.location.href = './login.html';
+}
 
-function handleAuthSubmit(event) {
+async function handleAuthSubmit(event) {
   event.preventDefault();
 
   const form = event.currentTarget;
@@ -115,14 +125,34 @@ function handleAuthSubmit(event) {
     return;
   }
 
+  let message = ''
   const isRegistration = form.dataset.authForm === 'register';
-  const message = isRegistration
-    ? 'Account created successfully. Opening Notes…'
-    : 'Signed in successfully. Opening Notes…';
+  const formData = new FormData(form)
+  const body = Object.fromEntries(formData.entries())
 
-  showAuthToast(message, 'success');
-  form.reset();
-  setTimeout(redirectToNotes, 900);
+  if (isRegistration) {
+    const register = await api.post('/auth/signup', body)
+    console.log(register);
+    
+    message = 'Account created successfully. Opening Notes…'
+    showAuthToast(message, 'success');
+    form.reset();
+     setTimeout(redirectToLogin, 900);
+  } else {
+    console.log("Login button");
+    
+    const login = await api.post('/auth/login', body)
+    console.log(login);
+    
+    message = 'Signed in successfully. Opening Notes…';
+    showAuthToast(message, 'success');
+    form.reset();
+    setTimeout(redirectToNotes, 900);
+  }
+  
+
+  
+ 
 }
 
 function handleProviderClick(event) {

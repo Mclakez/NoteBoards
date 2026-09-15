@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="./css/global.css" />
   <link rel="stylesheet" href="./css/auth.css" />
-  <script defer src="./js/auth.js"></script>
+  <script defer src="./js/auth.js" type="module"></script>
   <title>Create an account | NoteBoards</title>
 </head>
 <body class="auth-page">
@@ -22,7 +22,7 @@
     <form class="auth-form" data-auth-form="register" novalidate>
       <div class="field">
         <label for="register-name">Full name</label>
-        <input id="register-name" name="name" type="text" autocomplete="name" placeholder="Fadairo Marvellous" aria-describedby="register-name-error" />
+        <input id="register-name" name="username" type="text" autocomplete="name" placeholder="Fadairo Marvellous" aria-describedby="register-name-error" />
         <p class="field-error" id="register-name-error" aria-live="polite"></p>
       </div>
       <div class="field">
@@ -34,7 +34,7 @@
         <label for="register-password">Password</label>
         <div class="password-control">
           <input id="register-password" name="password" type="password" autocomplete="new-password" placeholder="Create a password" aria-describedby="register-password-error" />
-          <button class="password-toggle" type="button" aria-label="Show password" aria-pressed="false">◉</button>
+          <button class="password-toggle" type="button" aria-label="Show password" aria-pressed="false"><img src="./images/icons8-eye-50.png"></button>
         </div>
         <p class="field-error" id="register-password-error" aria-live="polite"></p>
       </div>
@@ -42,7 +42,7 @@
         <label for="register-confirm-password">Confirm password</label>
         <div class="password-control">
           <input id="register-confirm-password" name="confirmPassword" type="password" autocomplete="new-password" placeholder="Confirm your password" aria-describedby="register-confirm-password-error" />
-          <button class="password-toggle" type="button" aria-label="Show password" aria-pressed="false">◉</button>
+          <button class="password-toggle" type="button" aria-label="Show password" aria-pressed="false"><img src="./images/icons8-eye-50.png"></button>
         </div>
         <p class="field-error" id="register-confirm-password-error" aria-live="polite"></p>
       </div>

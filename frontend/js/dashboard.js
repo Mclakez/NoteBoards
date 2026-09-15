@@ -1,3 +1,5 @@
+import { api } from "./api.js";
+
 const dashboardKind = document.body.dataset.dashboard;
 const dashboardNoun = dashboardKind === 'board' ? 'Board' : 'Note';
 const dashboardTitle = dashboardKind === 'board' ? 'My handsome face' : 'Trip to Ogbomoso';
@@ -20,14 +22,14 @@ function getDefaultItems() {
   ];
 }
 
-function getStoredItems() {
-  const storedItems = localStorage.getItem(dashboardStorageKey);
-
-  return storedItems ? JSON.parse(storedItems) : getDefaultItems();
+async function getNotes() {
+  const notes = await api.get('/noteCanvas')
+  return notes
 }
 
-function saveItems(items) {
-  localStorage.setItem(dashboardStorageKey, JSON.stringify(items));
+async function getBoards() {
+  const boards = await api.get('/boardCanvas')
+  return boards
 }
 
 function getPreviewMarkup() {
@@ -49,24 +51,42 @@ function createCardMarkup(item) {
   const pinActionLabel = item.pinned ? 'Unpin' : 'Pin';
 
   return `
-    <article class="dashboard-card" data-name="${item.name}" data-pinned="${item.pinned}">
+    <article class="dashboard-card" data-name="${item.title}" data-pinned="${item.pinned}" data-id="${item._id}">
       <div class="card-preview ${dashboardKind}-preview">${getPreviewMarkup()}</div>
       <button class="menu-toggle" type="button" aria-label="Open ${dashboardNoun} menu">•••</button>
       <div class="card-menu">
         <button class="close-menu" type="button" aria-label="Close menu">×</button>
-        <button type="button" data-action="pin">♙ ${pinActionLabel}</button>
-        <button type="button" data-action="delete">♙ Delete</button>
+        <button type="button" data-action="pin"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M12 16V21" stroke="#141B34" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M8 5.2918C8 5.02079 8 4.88529 8.01312 4.77132C8.1194 3.84789 8.84789 3.1194 9.77133 3.01312C9.88529 3 10.0208 3 10.2918 3H13.7082C13.9792 3 14.1147 3 14.2287 3.01312C15.1521 3.1194 15.8806 3.84789 15.9869 4.77132C16 4.88529 16 5.02079 16 5.2918C16 5.37885 16 5.42237 15.9967 5.46264C15.9708 5.78281 15.7927 6.07104 15.5179 6.2374C15.4834 6.25832 15.4444 6.27779 15.3666 6.31672L15.1055 6.44726C14.7021 6.64897 14.5003 6.74983 14.3681 6.90564C14.26 7.03286 14.1856 7.18509 14.1515 7.34846C14.1097 7.54854 14.1539 7.76968 14.2424 8.21197L15 12H15.3333C15.9533 12 16.2633 12 16.5176 12.0681C17.2078 12.2531 17.7469 12.7922 17.9319 13.4824C18 13.7367 18 14.0467 18 14.6667C18 14.9767 18 15.1317 17.9659 15.2588C17.8735 15.6039 17.6039 15.8735 17.2588 15.9659C17.1317 16 16.9767 16 16.6667 16H7.33333C7.02334 16 6.86835 16 6.74118 15.9659C6.39609 15.8735 6.12654 15.6039 6.03407 15.2588C6 15.1317 6 14.9767 6 14.6667C6 14.0467 6 13.7367 6.06815 13.4824C6.25308 12.7922 6.79218 12.2531 7.48236 12.0681C7.73669 12 8.04669 12 8.66667 12H9L9.75761 8.21197C9.84606 7.76968 9.89029 7.54854 9.84852 7.34846C9.81441 7.18509 9.73995 7.03286 9.63194 6.90564C9.49965 6.74983 9.29794 6.64897 8.89452 6.44726L8.63344 6.31672C8.55558 6.27779 8.51665 6.25832 8.48208 6.2374C8.20731 6.07104 8.02917 5.78281 8.00326 5.46264C8 5.42237 8 5.37885 8 5.2918Z" stroke="#141B34" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+ ${pinActionLabel}</button>
+        <button type="button" data-action="delete"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M17.875 5.0415L17.3069 14.2312C17.1617 16.579 17.0892 17.753 16.5007 18.5971C16.2097 19.0143 15.8351 19.3665 15.4006 19.6312C14.5219 20.1665 13.3457 20.1665 10.9933 20.1665C8.63786 20.1665 7.46011 20.1665 6.5808 19.6302C6.14607 19.3651 5.77133 19.0122 5.48046 18.5942C4.89214 17.7489 4.82116 16.5733 4.67923 14.2221L4.125 5.0415" stroke="#141B34" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M2.75 5.04183H19.25M14.7177 5.04183L14.092 3.75092C13.6763 2.8934 13.4684 2.46464 13.1099 2.19724C13.0304 2.13792 12.9462 2.08516 12.8581 2.03947C12.4611 1.8335 11.9846 1.8335 11.0316 1.8335C10.0547 1.8335 9.56633 1.8335 9.16271 2.04811C9.07326 2.09567 8.9879 2.15057 8.90752 2.21224C8.54484 2.49047 8.34224 2.93492 7.93706 3.82382L7.38184 5.04183" stroke="#141B34" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M8.70898 15.125V9.625" stroke="#141B34" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M13.291 15.125V9.625" stroke="#141B34" stroke-width="1.5" stroke-linecap="round"/>
+</svg>
+ Delete</button>
       </div>
       <div class="card-meta">
-        <div class="card-title">${item.name}</div>
+        <div class="card-title">${item.title}</div>
         <div class="card-time">Edited 10 minutes ago</div>
       </div>
     </article>
   `;
 }
 
-function renderCards() {
-  const items = getStoredItems();
+async function renderCards() {
+   let items;
+  if (dashboardKind === "note") {
+    items = await getNotes();
+  } else {
+    items = await getBoards();
+  }
+  //Hehe, wahala
+  console.log(items);
+  // const items = getStoredItems();
   const pinnedItems = items.filter((item) => item.pinned);
   const otherItems = items.filter((item) => !item.pinned);
 
@@ -99,38 +119,62 @@ function getCardItem(cardElement) {
   };
 }
 
-function updateCardItem(cardElement, updateItem) {
-  const matchingItem = getCardItem(cardElement);
-  const items = getStoredItems();
-  const itemIndex = items.findIndex((item) => (
-    item.name === matchingItem.name && item.pinned === matchingItem.pinned
-  ));
+// async function updateCardItem(cardElement, updateItem) {
+//   const matchingItem = getCardItem(cardElement);
+//   const items = getStoredItems();
+//   const itemIndex = items.findIndex((item) => (
+//     item.name === matchingItem.name && item.pinned === matchingItem.pinned
+//   ));
 
-  if (itemIndex !== -1) {
-    updateItem(items, itemIndex);
-    saveItems(items);
-    renderCards();
+//   if (itemIndex !== -1) {
+//     updateItem(items, itemIndex);
+//     saveItems(items);
+//     await renderCards();
+//   }
+// }
+
+async function toggleCardPin(cardId, cardPin) {
+  // updateCardItem(cardElement, (items, itemIndex) => {
+  //   items[itemIndex].pinned = !items[itemIndex].pinned;
+  // });
+
+  if(dashboardKind === "note") {
+    const pinnedCard = await api.patch(`/noteCanvas/update/${cardId}`, {
+    pinned: !cardPin
+  })
+  console.log(pinnedCard)
+  } else {
+   const pinnedCard = await api.patch(`/boardCanvas/update/${cardId}`, {
+    pinned: !cardPin
+  })
+  console.log(pinnedCard)
   }
-}
+  await renderCards()
 
-function toggleCardPin(cardElement) {
-  updateCardItem(cardElement, (items, itemIndex) => {
-    items[itemIndex].pinned = !items[itemIndex].pinned;
-  });
-
-  const wasPinned = cardElement.dataset.pinned === 'true';
+  const wasPinned = cardPin === 'true';
   showDashboardToast(`${dashboardNoun} ${wasPinned ? 'unpinned' : 'pinned'}.`);
 }
 
-function deleteCard(cardElement) {
-  updateCardItem(cardElement, (items, itemIndex) => {
-    items.splice(itemIndex, 1);
-  });
-
+async function deleteCard(cardId) {
+  if(dashboardKind === "note") {
+    const deletedCard = await api.delete(`/noteCanvas/${cardId}`)
+  } else {
+    const deletedCard = await api.delete(`/boardCanvas/${cardId}`)
+  }
+  
+  // updateCardItem(cardElement, (items, itemIndex) => {
+  //   items.splice(itemIndex, 1);
+  // });
+  await renderCards()
   showDashboardToast(`${dashboardNoun} deleted.`);
 }
 
-function handleCardAction(event) {
+async function handleCardClick(event) {
+  const card = event.target.closest()
+  window.location.href = './notes-canvas.html'
+}
+
+async function handleCardAction(event) {
   const actionButton = event.target.closest('[data-action]');
 
   if (!actionButton) {
@@ -138,13 +182,18 @@ function handleCardAction(event) {
   }
 
   const cardElement = actionButton.closest('.dashboard-card');
+  const cardId = cardElement.dataset.id
+  const cardPin = cardElement.dataset.pinned === "true"
+  console.log(cardPin);
+  
 
   if (actionButton.dataset.action === 'pin') {
-    toggleCardPin(cardElement);
+
+    await toggleCardPin(cardId, cardPin);
   }
 
   if (actionButton.dataset.action === 'delete') {
-    deleteCard(cardElement);
+    await deleteCard(cardId);
   }
 }
 
@@ -190,30 +239,36 @@ function showModalError(modalBackdrop) {
   errorElement.textContent = `Enter at least 2 characters for the ${dashboardNoun.toLowerCase()} name.`;
 }
 
-function createDashboardItem(name) {
-  const items = getStoredItems();
-
-  items.push({ pinned: false, name });
-  saveItems(items);
-  renderCards();
+ async function createDashboardItem(title) {
+  if(dashboardKind === "note") {
+    const card = await api.post('/noteCanvas', {
+    title
+  } )
+  } else {
+    const card = await api.post('/boardCanvas', {
+    title
+  } )
+  }
+  
+  await renderCards();
   showDashboardToast(`${dashboardNoun} created.`);
 }
-
+// create card
 function handleModalSubmit(event) {
   event.preventDefault();
 
   const form = event.currentTarget;
   const modalBackdrop = form.closest('.modal-backdrop');
   const nameInput = form.querySelector('.modal-input');
-  const name = nameInput.value.trim();
+  const title = nameInput.value.trim();
 
-  if (name.length < 2) {
+  if (title.length < 2) {
     showModalError(modalBackdrop);
     nameInput.focus();
     return;
   }
 
-  createDashboardItem(name);
+  createDashboardItem(title);
   closeCreateModal(modalBackdrop);
 }
 
@@ -273,8 +328,8 @@ function openCreateModal() {
   modalBackdrop.addEventListener('keydown', handleModalKeydown);
 }
 
-function initializeDashboard() {
-  renderCards();
+async function initializeDashboard() {
+  await renderCards();
   document.addEventListener('click', handleDashboardClick);
   document.querySelector('.create-button').addEventListener('click', openCreateModal);
 }

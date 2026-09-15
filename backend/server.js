@@ -7,12 +7,18 @@ import { authRouter } from './routes/authRoutes.js'
 import { boardCardRouter } from './routes/boardCardRoutes.js'
 import { boardCanvasRouter } from './routes/boardCanvasRoutes.js'
 import cookieParser from 'cookie-parser'
+import cors from 'cors'
 
 
 initDB()
 
 const app = express()
 const PORT = 5000
+
+app.use(cors({
+    origin: 'http://127.0.0.1:5500',
+    credentials: true
+}))
 
 app.use(express.json())
 app.use(cookieParser())

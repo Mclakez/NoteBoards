@@ -21,6 +21,17 @@ export async function addNote(req, res) {
   }
 }
 
+// export async function getNotes(req, res) {
+//   try {
+//     const userId = req.user.userId
+//     const notes = await Note.find({ userId })
+//     return res.status(200).json(notes)
+//   } catch (error) {
+//     return res.status(500).json({message: "Server error", error: error.message})
+//   }
+  
+// }
+
 export async function updateNote(req, res) {
   const { noteId } = req.params
   
