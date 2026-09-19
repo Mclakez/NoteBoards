@@ -29,6 +29,14 @@ const NoteCardSchema = new mongoose.Schema({
   color: {
     type: String,
     default: "#FF6B6B"
+  },
+  height: {
+    type: Number,
+    default: 200
+  },
+  width: {
+    type: Number,
+    default: 200
   }
 }, { timestamps: true })
 

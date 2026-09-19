@@ -2,6 +2,8 @@ import express from 'express'
 import { addCanvas, deleteCanvas, updateCanvas, getAllCanvas, getCanvas } from '../controllers/noteCanvasControllers.js'
 import { checkJwt } from '../middlewares/auth.js'
 import { upload } from '../config/multer.js'
+import { cloudinary } from '../config/cloudinary.js'
+import { NoteCanvas } from '../models/NoteCanvas.js'
 
 export const noteCanvasRouter = express.Router()
 

@@ -3,11 +3,12 @@ import { NoteCanvas } from '../models/NoteCanvas.js'
 
 export async function addNote(req, res) {
   const { canvasId} = req.params
-  const { color } = req.body
+  const { x , y } = req.body
   try {
     const newCard = await Note.create({
       canvasId,
-      color
+      x,
+      y
     })
 
     res.status(200).json({

@@ -1,5 +1,6 @@
 import { api } from "./api.js";
 
+const dashboard = document.body
 const dashboardKind = document.body.dataset.dashboard;
 const dashboardNoun = dashboardKind === 'board' ? 'Board' : 'Note';
 const dashboardTitle = dashboardKind === 'board' ? 'My handsome face' : 'Trip to Ogbomoso';
@@ -52,7 +53,7 @@ function createCardMarkup(item) {
 
   return `
     <article class="dashboard-card" data-name="${item.title}" data-pinned="${item.pinned}" data-id="${item._id}">
-      <div class="card-preview ${dashboardKind}-preview">${getPreviewMarkup()}</div>
+      <div class="card-preview ${dashboardKind}-preview">${item.thumbnail_url ? `<img src="${item.thumbnail_url}">` : getPreviewMarkup()}</div>
       <button class="menu-toggle" type="button" aria-label="Open ${dashboardNoun} menu">•••</button>
       <div class="card-menu">
         <button class="close-menu" type="button" aria-label="Close menu">×</button>
@@ -169,9 +170,21 @@ async function deleteCard(cardId) {
   showDashboardToast(`${dashboardNoun} deleted.`);
 }
 
-async function handleCardClick(event) {
-  const card = event.target.closest()
-  window.location.href = './notes-canvas.html'
+dashboard.addEventListener('click', (e) => {
+  const canvas = e.target.closest('.dashboard-card')
+  if (e.target.closest('.menu-toggle') || e.target.closest('.card-menu')) return
+  if(!canvas) return
+  handleCardClick(canvas)
+})
+
+async function handleCardClick(canvas) {
+  const canvasId = canvas.dataset.id
+  if (dashboardKind === "note") {
+     window.location.href = `./note-canvas.html?canvasId=${encodeURIComponent(canvasId)}`
+  } else {
+     window.location.href = `./board-canvas.html?canvasId=${encodeURIComponent(canvasId)}`
+  }
+ 
 }
 
 async function handleCardAction(event) {

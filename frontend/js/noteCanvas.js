@@ -1,8 +1,14 @@
+import { api } from "./api.js";
+
 const colorBtns = document.querySelectorAll('.color_btn')
 const addCardBtn = document.querySelector('.create-button')
 const canvas = document.getElementById('canvas')
 const viewport = document.getElementById('viewport')
+const canvasId = new URLSearchParams(window.location.search).get('canvasId')
+const title = document.querySelector('h1')
 
+let thumbnailTimer = null
+let selectedCardId = null;
 let currentCard;
 let offsetX, offsetY;
 let canvasOffsetX, canvasOffsetY;
@@ -19,9 +25,31 @@ let panStartX, panStartY;
 viewport.scrollLeft = (10000 - window.innerWidth) / 2
 viewport.scrollTop = (10000 - window.innerHeight) / 2
 
+async function loadNotes() {
+    const data = await api.get(`/noteCanvas/${canvasId}`)
+    title.textContent = data.canvas.title
+    const noteCards = data.notes
+    canvas.innerHTML = "";
+    console.log(noteCards)
+    noteCards.forEach(noteCard => {
+        loadCards(noteCard)
+    })
+    syncSelectedCard()
+}
+
+loadNotes()
+
+function syncSelectedCard() {
+    document.querySelectorAll('.note_wrapper').forEach(card => {
+        card.classList.toggle('selected', card.dataset.cardId === selectedCardId);
+    });
+}
+
 addCardBtn.addEventListener('click', createCard)
 
 document.addEventListener("pointerdown", (e) => {
+    if (e.target.closest('.btns_container')) return
+    if (e.target.closest('article')) return
     const content = e.target.closest('.note_content');
     if (content) return;
     const card = e.target.closest('.note_wrapper')
@@ -43,7 +71,9 @@ document.addEventListener("pointerdown", (e) => {
 
 viewport.addEventListener('pointerdown', (e) => {
     // Only left-click, and ignore cards / UI buttons
-    if (e.button !== 0) return
+     if (e.button !== 0) return
+    if (e.target.closest('.btns_container')) return
+    if (e.target.closest('article')) return
     if (e.target.closest('.note_wrapper')) return
     if (e.target.closest('.btns_container')) return
     if (e.target.closest('article')) return
@@ -90,28 +120,38 @@ document.addEventListener("pointermove", (e) => {
 
     currentCard.style.left = `${left}px`
     currentCard.style.top = `${top}px`
+
     e.preventDefault()
-    console.log("card move", rect);
 })
 
-document.addEventListener('click', (e) => {
+
+//delete card
+document.addEventListener('click', async (e) => {
     const deleteBtn = e.target.closest('.delete_btn');
     if (!deleteBtn) return;
     
     const card = deleteBtn.closest('.note_wrapper');
+    const cardId = card.dataset.cardId
     console.log(deleteBtn);
+    // card.remove()
     
     if (card) {
-        card.remove();
+        const deletedCard = await api.delete(`/noteCard/${canvasId}/${cardId}`)
+        console.log(deletedCard)
+        await loadNotes()
     }
+    
 });
 
-document.addEventListener('keydown', (e) => {
+document.addEventListener('keydown',async (e) => {
     if (e.key === 'Delete') {
         const selected = document.querySelector('.note_wrapper.selected');
-        if (selected && !e.target.closest('.note_content')) {
-            selected.remove();
-            e.preventDefault();
+        if(!selected) return
+        const cardId = selected.dataset.cardId
+        if (!e.target.closest('.note_content')) {
+        const deletedCard = await api.delete(`/noteCard/${canvasId}/${cardId}`)
+        console.log(deletedCard)
+        await loadNotes()
         }
     }
 });
@@ -124,17 +164,22 @@ document.addEventListener('click', (e) => {
         card.classList.remove('selected')
     })
     card.classList.add('selected')
+    selectedCardId = card.dataset.cardId
 })
 
-document.addEventListener("click", (e) => {
+document.addEventListener("click", async (e) => {
         const indexBtn = e.target.closest(".index_btn");
         if (!indexBtn) return;
         const card = indexBtn.closest(".note_wrapper");
         if (!card) return;
+        const cardId = card.dataset.cardId
 
         // bring to front
         highestZIndex++;
-        card.style.zIndex = highestZIndex;
+        const updatedZCard = await api.patch(`/noteCard/${canvasId}/${cardId}`, {
+            z_index: highestZIndex
+        })
+        await loadNotes()
 
         // select it
         document.querySelectorAll(".note_wrapper").forEach((c) => {
@@ -147,13 +192,31 @@ document.addEventListener("click", (e) => {
 
 
 
-document.addEventListener('pointerup', (e) => {
+document.addEventListener('pointerup', async (e) => {
     canvas.style.cursor = 'default'
+    //keeps the card from moving on color change
+    if (!isDragging || !currentCard) {
+        isDragging = false
+        isPanning = false
+        return
+    }
+
     isDragging = false
     isPanning = false
+    const rect = canvas.getBoundingClientRect()
+
+    let left = Math.max(0, Math.min(e.clientX - rect.left - offsetX, canvas.clientWidth - currentCard.offsetWidth));
+    let top = Math.max(0, Math.min(e.clientY - rect.top - offsetY, canvas.clientHeight - currentCard.offsetHeight)); 
+    const currentCardId = currentCard.dataset.cardId
+    const updatedCard = await api.patch(`/noteCard/${canvasId}/${currentCardId}`, {
+        x: left,
+        y: top
+    })
+    scheduleScreenshotTimer()
+    e.preventDefault()
 })
 
-
+//handling card resizing
 document.addEventListener('pointerdown', (e) => {
     const handle = e.target.closest('.handle');
     if (!handle) return;
@@ -162,6 +225,8 @@ document.addEventListener('pointerdown', (e) => {
 
     // target the wrapper, not just the card
     const wrapper = handle.closest('.note_wrapper');
+    const cardId = wrapper.dataset.cardId
+    if (!cardId) return;
     const startX = e.clientX;
     const startY = e.clientY;
     const startWidth = wrapper.offsetWidth;
@@ -200,7 +265,17 @@ document.addEventListener('pointerdown', (e) => {
         }
     }
 
-    function onResizeUp() {
+
+    async function onResizeUp() {
+        const updatedSizeCard = await api.patch(`/noteCard/${canvasId}/${cardId}`, {
+            height: Number.parseFloat(wrapper.style.height),
+            width: Number.parseFloat(wrapper.style.width),
+            x: Number.parseFloat(wrapper.style.left),
+            y: Number.parseFloat(wrapper.style.top)
+        })
+
+        console.log(updatedSizeCard)
+        scheduleScreenshotTimer()
         document.removeEventListener('pointermove', onResizeMove);
         document.removeEventListener('pointerup', onResizeUp);
     }
@@ -211,11 +286,11 @@ document.addEventListener('pointerdown', (e) => {
 
 
 
-
-
-function createCard() {
+//loading the cards
+async function loadCards(noteCard) {
     let card = document.createElement('div')
     card.classList.add('note_wrapper')
+    card.dataset.cardId = noteCard._id
 
     card.innerHTML = `
         <div class="note_card">
@@ -238,10 +313,57 @@ function createCard() {
         </div>
     `
 
-    card.style.left = `${viewport.scrollLeft + window.innerWidth / 2 - 200}px`
-    card.style.top = `${viewport.scrollTop + window.innerHeight / 2 - 100}px`
+    const content = card.querySelector('.note_content')
+    const header = card.querySelector('.note_header')
+    card.style.height = `${noteCard.height}px`
+    card.style.width = `${noteCard.width}px`
+    card.style.zIndex = noteCard.z_index
+    highestZIndex = Math.max(highestZIndex, noteCard.z_index)
+    header.style.backgroundColor = darkenColor(noteCard.color)
+    content.style.backgroundColor = noteCard.color
+    content.textContent = noteCard.content
+
+    
+
+    // card.style.left = `${viewport.scrollLeft + window.innerWidth / 2 - 200}px`
+    // card.style.top = `${viewport.scrollTop + window.innerHeight / 2 - 100}px`
+
+    card.style.left = `${noteCard.x}px`
+    card.style.top = `${noteCard.y}px`
+    let saveTimeOut;
+
+    content.addEventListener('input', async () => {
+        
+        const text = content.textContent.trim()
+        const cardId = card.dataset.cardId
+        clearTimeout(saveTimeOut)
+        saveTimeOut = setTimeout(async () => {
+           try {
+            const updatedTextCard = await api.patch(`/noteCard/${canvasId}/${cardId}`, {
+                content: text
+            })
+            scheduleScreenshotTimer()
+           } catch (error) {
+                console.error('Failed to save note content:', error)
+           }
+        }, 300)
+    })
 
     canvas.appendChild(card)
+}
+
+
+
+//create a single card
+async function createCard() {
+    const notes = await api.post(`/noteCard/${canvasId}`, {
+        canvasId,
+        x : viewport.scrollLeft + window.innerWidth / 2 - 200,
+        y: viewport.scrollTop + window.innerHeight / 2 - 100
+    })
+
+    await loadNotes()
+    scheduleScreenshotTimer()
 }
 
 
@@ -249,23 +371,28 @@ function darkenColor(hex) {
     let r = parseInt(hex.slice(1, 3), 16)
     let g = parseInt(hex.slice(3, 5), 16)
     let b = parseInt(hex.slice(5, 7), 16)
-    r = Math.floor(r * 0.75)
-    g = Math.floor(g * 0.75)
-    b = Math.floor(b * 0.75)
+    r = Math.floor(r * 0.5)
+    g = Math.floor(g * 0.5)
+    b = Math.floor(b * 0.5)
     return `rgb(${r}, ${g}, ${b})`
 }
 
-
+//change card color
 colorBtns.forEach(colorBtn => {
     let color = colorBtn.getAttribute('data-color')
     colorBtn.style.backgroundColor = color
 
-    colorBtn.addEventListener('click', () => {
+    colorBtn.addEventListener('click',async (e) => {
+        e.preventDefault()
+        e.stopPropagation()
         const selected = document.querySelector('.selected')
-        if (selected) {
-            selected.querySelector('.note_content').style.backgroundColor = color
-            selected.querySelector('.note_header').style.backgroundColor = darkenColor(color)
-        }
+        if(!selected) return
+        const cardId = selected.dataset.cardId
+        const updatedColorCard = await api.patch(`/noteCard/${canvasId}/${cardId}`, {
+            color
+        })
+        
+        await loadNotes()
     })
 })
 
@@ -305,9 +432,9 @@ async function saveScreenshot() {
     screenshotCanvas.toBlob(async (blob) => {
         const formData = new FormData()
         formData.append('thumbnail', blob, 'thumbnail.png')
-
+        console.log(blob)
         try {
-            await api.post(`/canvases/${canvasId}/thumbnail`, formData)
+            await api.post(`/noteCanvas/${canvasId}/thumbnail`, formData)
         } catch (err) {
             console.error('Thumbnail save failed:', err)
         }
@@ -316,6 +443,20 @@ async function saveScreenshot() {
 
 document.querySelector('.back_btn').addEventListener('click', async (e) => {
     e.preventDefault()
-    await saveScreenshot()
+    const screen = await saveScreenshot()
     window.location.href = 'notes.html'
 })
+
+
+//Make screenshots
+function scheduleScreenshotTimer() {
+    clearTimeout(thumbnailTimer)
+    thumbnailTimer = setTimeout(async () => {
+        try {
+            await saveScreenshot()
+            console.log("Thumbnail updated in Cloudinary")
+        } catch (error) {
+             console.error('Failed to auto-save thumbnail:', error)
+        }
+    }, 1000)
+}

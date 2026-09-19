@@ -131,7 +131,7 @@ button {
 
 .add-photo-button {
   display: grid;
-  width: 6.1rem;
+  width: 4rem;
   aspect-ratio: 1;
   place-items: center;
   border-radius: 50%;

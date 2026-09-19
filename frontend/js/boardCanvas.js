@@ -1,3 +1,4 @@
+import { api } from "./api.js";
 const photoBoard = document.querySelector('#photo-board');
 const photoCount = document.querySelector('#photo-count');
 const emptyBoardMessage = document.querySelector('#empty-board-message');
