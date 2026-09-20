@@ -327,6 +327,7 @@
     font-size: 2rem;
     line-height: 1;
     transform: translateY(-0.05rem);
+    transform: translateX(0.3rem);
   }
 
   .card-grid {
