@@ -14,6 +14,7 @@ const canvasId = new URLSearchParams(window.location.search).get('canvasId');
 const storageKey = 'noteboards-photo-board';
 const boardColourKey = 'noteboards-photo-board-colour';
 const maximumPhotos = 20;
+const MOBILE_BREAKPOINT = 768;
 let cards = [];
 let activeCardId = null;
 let dragState = null;
@@ -131,7 +132,7 @@ async function loadBoard() {
     const data = await api.get(`/boardCanvas/${canvasId}`);
     const boardCards = data.notes || [];
 
-    cards = boardCards.map((card) => ({
+    cards = boardCards.map((card) => clampCardPosition({
       id: card._id,
       title: card.title || 'Untitled photo',
       description: card.description || '',
@@ -152,6 +153,27 @@ async function loadBoard() {
   } finally {
     setButtonLoading(addPhotoButton, false, '+');
   }
+}
+
+function isMobileBoard() {
+  return window.innerWidth <= MOBILE_BREAKPOINT;
+}
+
+function getCardDragLimits() {
+  if (isMobileBoard()) {
+    return { minX: 12, maxX: 88, minY: 12, maxY: 88 };
+  }
+
+  return { minX: 8, maxX: 92, minY: 13, maxY: 87 };
+}
+
+function clampCardPosition(card) {
+  const { minX, maxX, minY, maxY } = getCardDragLimits();
+
+  card.x = Math.min(maxX, Math.max(minX, Number(card.x ?? minX)));
+  card.y = Math.min(maxY, Math.max(minY, Number(card.y ?? minY)));
+
+  return card;
 }
 
 function getBoardColour() {
@@ -561,9 +583,10 @@ function dragCard(event) {
   const { boardBounds, card, cardElement, offsetX, offsetY } = dragState;
   const x = ((event.clientX - boardBounds.left - offsetX) / boardBounds.width) * 100;
   const y = ((event.clientY - boardBounds.top - offsetY) / boardBounds.height) * 100;
+  const { minX, maxX, minY, maxY } = getCardDragLimits();
 
-  card.x = Math.min(92, Math.max(8, x));
-  card.y = Math.min(87, Math.max(13, y));
+  card.x = Math.min(maxX, Math.max(minX, x));
+  card.y = Math.min(maxY, Math.max(minY, y));
   cardElement.style.left = `${card.x}%`;
   cardElement.style.top = `${card.y}%`;
   dragState.hasMoved = true;
@@ -698,6 +721,14 @@ async function initializeBoard() {
   photoBoard.addEventListener('pointercancel', stopDraggingCard);
   photoBoard.addEventListener('pointerup', stopRotatingCard);
   photoBoard.addEventListener('pointercancel', stopRotatingCard);
+  window.addEventListener('resize', () => {
+    if (!cards.length) {
+      return;
+    }
+
+    cards = cards.map((card) => clampCardPosition(card));
+    renderCards();
+  });
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape' && !modalBackdrop.hidden) {
       closeModal();

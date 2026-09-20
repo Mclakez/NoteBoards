@@ -22,6 +22,28 @@ let isPanning = false
 let highestZIndex = 1;
 let panStartX, panStartY;
 
+function isMobileCanvas() {
+    return window.innerWidth <= 768;
+}
+
+function clampCardToCanvas(cardElement) {
+    if (!cardElement || !canvas) {
+        return;
+    }
+
+    if (!isMobileCanvas()) {
+        return;
+    }
+
+    const maxLeft = Math.max(8, canvas.clientWidth - cardElement.offsetWidth - 8);
+    const maxTop = Math.max(8, canvas.clientHeight - cardElement.offsetHeight - 8);
+    const currentLeft = Number.parseFloat(cardElement.style.left) || 0;
+    const currentTop = Number.parseFloat(cardElement.style.top) || 0;
+
+    cardElement.style.left = `${Math.min(maxLeft, Math.max(8, currentLeft))}px`;
+    cardElement.style.top = `${Math.min(maxTop, Math.max(8, currentTop))}px`;
+}
+
 viewport.scrollLeft = (10000 - window.innerWidth) / 2
 viewport.scrollTop = (10000 - window.innerHeight) / 2
 
@@ -118,6 +140,11 @@ document.addEventListener("pointermove", (e) => {
     let left = Math.max(0, Math.min(e.clientX - rect.left - offsetX, canvas.clientWidth - currentCard.offsetWidth));
     let top = Math.max(0, Math.min(e.clientY - rect.top - offsetY, canvas.clientHeight - currentCard.offsetHeight));
 
+    if (isMobileCanvas()) {
+        left = Math.min(Math.max(8, left), Math.max(8, canvas.clientWidth - currentCard.offsetWidth - 8));
+        top = Math.min(Math.max(8, top), Math.max(8, canvas.clientHeight - currentCard.offsetHeight - 8));
+    }
+
     currentCard.style.left = `${left}px`
     currentCard.style.top = `${top}px`
 
@@ -207,6 +234,12 @@ document.addEventListener('pointerup', async (e) => {
 
     let left = Math.max(0, Math.min(e.clientX - rect.left - offsetX, canvas.clientWidth - currentCard.offsetWidth));
     let top = Math.max(0, Math.min(e.clientY - rect.top - offsetY, canvas.clientHeight - currentCard.offsetHeight)); 
+
+    if (isMobileCanvas()) {
+        left = Math.min(Math.max(8, left), Math.max(8, canvas.clientWidth - currentCard.offsetWidth - 8));
+        top = Math.min(Math.max(8, top), Math.max(8, canvas.clientHeight - currentCard.offsetHeight - 8));
+    }
+
     const currentCardId = currentCard.dataset.cardId
     const updatedCard = await api.patch(`/noteCard/${canvasId}/${currentCardId}`, {
         x: left,
@@ -243,23 +276,26 @@ document.addEventListener('pointerdown', (e) => {
         const dx = ev.clientX - startX;
         const dy = ev.clientY - startY;
 
+        const minWidth = isMobileCanvas() ? 120 : 200;
+        const minHeight = isMobileCanvas() ? 120 : 150;
+
         if (isRight) {
-            wrapper.style.width = `${Math.max(150, startWidth + dx)}px`;
+            wrapper.style.width = `${Math.max(minWidth, startWidth + dx)}px`;
         }
 
         if (isLeft) {
-            const newWidth = Math.max(150, startWidth - dx);
+            const newWidth = Math.max(minWidth, startWidth - dx);
             wrapper.style.width = `${newWidth}px`;
             // move card left to simulate left-edge resize
             wrapper.style.left = `${startLeft + (startWidth - newWidth)}px`;
         }
 
         if (isBottom) {
-            wrapper.style.height = `${Math.max(100, startHeight + dy)}px`;
+            wrapper.style.height = `${Math.max(minHeight, startHeight + dy)}px`;
         }
 
         if (isTop) {
-            const newHeight = Math.max(100, startHeight - dy);
+            const newHeight = Math.max(minHeight, startHeight - dy);
             wrapper.style.height = `${newHeight}px`;
             wrapper.style.top = `${startTop + (startHeight - newHeight)}px`;
         }
@@ -284,7 +320,9 @@ document.addEventListener('pointerdown', (e) => {
     document.addEventListener('pointerup', onResizeUp);
 });
 
-
+window.addEventListener('resize', () => {
+    document.querySelectorAll('.note_wrapper').forEach((card) => clampCardToCanvas(card));
+});
 
 //loading the cards
 async function loadCards(noteCard) {
@@ -315,8 +353,13 @@ async function loadCards(noteCard) {
 
     const content = card.querySelector('.note_content')
     const header = card.querySelector('.note_header')
-    card.style.height = `${noteCard.height}px`
-    card.style.width = `${noteCard.width}px`
+    const minWidth = isMobileCanvas() ? 120 : 200
+    const minHeight = isMobileCanvas() ? 120 : 180
+    const width = Math.max(minWidth, Number(noteCard.width) || (isMobileCanvas() ? 150 : 200))
+    const height = Math.max(minHeight, Number(noteCard.height) || (isMobileCanvas() ? 150 : 200))
+
+    card.style.height = `${height}px`
+    card.style.width = `${width}px`
     card.style.zIndex = noteCard.z_index
     highestZIndex = Math.max(highestZIndex, noteCard.z_index)
     header.style.backgroundColor = darkenColor(noteCard.color)
@@ -356,10 +399,15 @@ async function loadCards(noteCard) {
 
 //create a single card
 async function createCard() {
+    const defaultWidth = isMobileCanvas() ? 150 : 200
+    const defaultHeight = isMobileCanvas() ? 150 : 200
+
     const notes = await api.post(`/noteCard/${canvasId}`, {
         canvasId,
-        x : viewport.scrollLeft + window.innerWidth / 2 - 200,
-        y: viewport.scrollTop + window.innerHeight / 2 - 100
+        x : viewport.scrollLeft + window.innerWidth / 2 - defaultWidth / 2,
+        y: viewport.scrollTop + window.innerHeight / 2 - defaultHeight / 2,
+        width: defaultWidth,
+        height: defaultHeight
     })
 
     await loadNotes()

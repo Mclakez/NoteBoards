@@ -10,6 +10,33 @@ const dashboardToast = document.querySelector('.toast');
 const dashboardStorageKey = `noteboards-${dashboardKind}s`;
 let dashboardToastTimer;
 
+function getInitialsFromName(name = '') {
+  const cleanName = name.trim();
+
+  if (!cleanName) {
+    return 'NB';
+  }
+
+  const nameParts = cleanName.split(/\s+/).filter(Boolean);
+
+  if (nameParts.length === 1) {
+    return nameParts[0].slice(0, 2).toUpperCase();
+  }
+
+  return `${nameParts[0][0]}${nameParts[nameParts.length - 1][0]}`.toUpperCase();
+}
+
+function initializeUserAvatar() {
+  const avatarButton = document.querySelector('.avatar');
+
+  if (!avatarButton) {
+    return;
+  }
+
+  const savedUserName = localStorage.getItem('noteboards-user') || 'NoteBoards';
+  avatarButton.textContent = getInitialsFromName(savedUserName);
+}
+
 function getDefaultItems() {
   return [
     { pinned: true, name: dashboardTitle },
@@ -374,6 +401,7 @@ function openCreateModal() {
 }
 
 async function initializeDashboard() {
+  initializeUserAvatar();
   await renderCards();
   document.addEventListener('click', handleDashboardClick);
   document.querySelector('.create-button').addEventListener('click', openCreateModal);

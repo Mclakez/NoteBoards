@@ -133,6 +133,10 @@ async function handleAuthSubmit(event) {
   if (isRegistration) {
     const register = await api.post('/auth/signup', body)
     console.log(register);
+
+    if (body.username) {
+      localStorage.setItem('noteboards-user', body.username);
+    }
     
     message = 'Account created successfully. Opening Notes…'
     showAuthToast(message, 'success');
@@ -143,6 +147,11 @@ async function handleAuthSubmit(event) {
     
     const login = await api.post('/auth/login', body)
     console.log(login);
+
+    const loggedInUser = login?.username || body.username;
+    if (loggedInUser) {
+      localStorage.setItem('noteboards-user', loggedInUser);
+    }
     
     message = 'Signed in successfully. Opening Notes…';
     showAuthToast(message, 'success');
@@ -157,8 +166,9 @@ async function handleAuthSubmit(event) {
 
 function handleProviderClick(event) {
   const provider = event.currentTarget.dataset.provider;
+  handleGoogleSignup()
 
-  showAuthToast(`${provider} sign-in is not configured yet.`, 'error');
+  showAuthToast(`${provider} sign-in `);
 }
 
 function initializeAuthPage() {
@@ -180,3 +190,9 @@ function initializeAuthPage() {
 }
 
 initializeAuthPage();
+
+
+const handleGoogleSignup = () => {
+    window.location.href = `${BASE_URL}/api/auth/google`
+   
+  };

@@ -1,5 +1,16 @@
 const BASE_URL = "http://localhost:5000/api"
 
+function redirectToLoginPage() {
+    const isLoginPage = window.location.pathname.endsWith('/login.html')
+
+    if (isLoginPage) {
+        return
+    }
+
+    localStorage.removeItem('noteboards-user')
+    window.location.href = './login.html'
+}
+
 export const api = {
     get: (endpoint) => request(endpoint),
     post: (endpoint, body) => request(endpoint, 'POST', body),
@@ -12,7 +23,6 @@ const request = async(endpoint, method = 'GET', body = null) => {
         method,
         credentials: 'include',
         headers: {}
-        
     }
 
     if (body && !(body instanceof FormData)) {
@@ -20,12 +30,23 @@ const request = async(endpoint, method = 'GET', body = null) => {
         options.body = JSON.stringify(body)
     }
 
-    if( body instanceof FormData) {
+    if (body instanceof FormData) {
         options.body = body
     }
 
     const res = await fetch(`${BASE_URL}${endpoint}`, options)
-    const data = await res.json()
-    if (!res.ok) throw new Error(data.message || 'Something went wrong')
+    const contentType = res.headers.get('content-type') || ''
+    const data = contentType.includes('application/json') ? await res.json() : {}
+
+    if (!res.ok) {
+        const message = data.message || ''
+
+        if (res.status === 401 || res.status === 403 || /jwt|token/i.test(message)) {
+            redirectToLoginPage()
+        }
+
+        throw new Error(message || 'Something went wrong')
+    }
+
     return data
 }
