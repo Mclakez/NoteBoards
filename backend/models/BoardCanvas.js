@@ -17,7 +17,10 @@ const BoardCanvasSchema = new mongoose.Schema({
   background: {
     type: Number,
     default: 0
-    
+  },
+  thumbnail_url: {
+    type: String,
+    default: ''
   }
 }, { timestamps: true })
 

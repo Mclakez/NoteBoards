@@ -9,8 +9,8 @@ const storage = new CloudinaryStorage({
         folder: "NoteBoards/images",
         allowed_formats: ["jpg", "png", "jpeg", "svg", "webp"],
         transformation: [
-            {width: 500, height: 500, crop: "limit"}
+            { width: 1800, height: 1800, crop: "limit", quality: "auto", fetch_format: "auto" }
         ]
     },
 })
-export const upload = multer({ storage})
+export const upload = multer({ storage })

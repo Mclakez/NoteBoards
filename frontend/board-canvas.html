@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="stylesheet" href="./css/global.css" />
     <link rel="stylesheet" href="./css/board-canvas.css" />
+    <script src="./js/vendor/html2canvas.min.js"></script>
     <script type="module" src="./js/boardCanvas.js" defer></script>
     <title>Board Canvas</title>
   </head>
@@ -15,7 +16,7 @@
         <h1 id="board-title">Hang your favourite photos</h1>
         <p>Drag ’n’ drop to rearrange</p>
       </div>
-      <p class="board-name" id="board-name">My handsome face</p>
+      <p class="board-name" id="board-name" contenteditable="true" spellcheck="false" role="textbox" aria-label="Board name" aria-multiline="false">My handsome face</p>
     </header>
 
     <main class="board-layout">

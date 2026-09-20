@@ -78,10 +78,20 @@ button {
 
 .board-name {
   justify-self: end;
+  min-width: 10rem;
   margin-top: 0.15rem;
   color: #242424;
   font-family: "Grapenuts", cursive;
   font-size: clamp(1rem, 1.25vw, 1.35rem);
+  text-align: right;
+  outline: none;
+  border-radius: 0.45rem;
+  padding: 0.25rem 0.5rem;
+}
+
+.board-name:focus {
+  background: rgba(17, 17, 17, 0.04);
+  box-shadow: inset 0 0 0 2px rgba(17, 17, 17, 0.15);
 }
 
 .board-layout {
@@ -149,8 +159,33 @@ button {
   transform: scale(1.04);
 }
 
+button.is-loading {
+  opacity: 0.8;
+  cursor: wait;
+  pointer-events: none;
+}
+
+.button-spinner {
+  display: inline-block;
+  width: 1rem;
+  height: 1rem;
+  margin-right: 0.6rem;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: button-spin 0.7s linear infinite;
+  vertical-align: middle;
+}
+
+@keyframes button-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .photo-board {
   position: relative;
+  z-index: 1;
   min-height: clamp(38rem, 68vh, 62rem);
   overflow: hidden;
   border-radius: 2.25rem;
@@ -179,6 +214,7 @@ button {
 
 .polaroid-card {
   position: absolute;
+  z-index: 1;
   width: clamp(13rem, 18vw, 23rem);
   padding: 1.35rem 1.35rem 1.75rem;
   border-radius: 0.7rem;
@@ -190,7 +226,7 @@ button {
 }
 
 .polaroid-card.dragging {
-  z-index: 10;
+  z-index: 12;
   cursor: grabbing;
   box-shadow: 0 1.5rem 2.3rem rgba(26, 10, 0, 0.32);
 }
@@ -289,7 +325,7 @@ button {
 
 .modal-backdrop {
   position: fixed;
-  z-index: 20;
+  z-index: 1000;
   inset: 0;
   display: grid;
   overflow-y: auto;
@@ -304,6 +340,7 @@ button {
 
 .photo-modal {
   position: relative;
+  z-index: 1001;
   width: min(100%, 50rem);
   padding: 3rem;
   border-radius: 1.15rem;

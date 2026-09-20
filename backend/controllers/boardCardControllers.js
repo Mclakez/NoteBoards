@@ -3,18 +3,18 @@ import { BoardCard } from '../models/BoardCard.js'
 import { BoardCanvas } from '../models/BoardCanvas.js'
 
 export async function addCard(req, res) {
-  const { canvasId} = req.params
+  const { canvasId } = req.params
   const { title, description } = req.body
   try {
 
     if (!req.file) {
-    return res.status(400).json({ message: 'No file uploaded' })
+      return res.status(400).json({ message: 'No file uploaded' })
     }
 
     const cardImageUrl = req.file.path
-    const cardImageId = cardImageUrl.split('/').slice(-2).join('/').split('.')[0]
-    
-    const newCard = await Note.create({
+    const cardImageId = req.file.filename
+
+    const newCard = await BoardCard.create({
       canvasId,
       cardImageId,
       cardImageUrl,
@@ -34,13 +34,13 @@ export async function addCard(req, res) {
 }
 
 export async function updateCard(req, res) {
-  const { cardId } = req.params
-  const {title, description, x, y, rotation, z_index} = req.body
+  const { noteId } = req.params
+  const { title, description, x, y, rotation, z_index } = req.body
   try {
-    const card = await BoardCard.findById(cardId)
+    const card = await BoardCard.findById(noteId)
     if (!card) return res.status(404).json({ error: "Card not found" })
     const updateData = {}
-    
+
     if (title !== undefined) updateData.title = title
     if (description !== undefined) updateData.description = description
     if (x !== undefined) updateData.x = x
@@ -49,14 +49,14 @@ export async function updateCard(req, res) {
     if (z_index !== undefined) updateData.z_index = z_index
 
     if (req.file) {
-          if (card.cardImageId) {
-            await cloudinary.uploader.destroy(card.cardImageId)
-          }
-          updateData.cardImageUrl = req.file.path
-          updateData.cardImageId = req.file.filename
-        }
-    
-    const updatedCard = await Note.findByIdAndUpdate(cardId, {
+      if (card.cardImageId) {
+        await cloudinary.uploader.destroy(card.cardImageId)
+      }
+      updateData.cardImageUrl = req.file.path
+      updateData.cardImageId = req.file.filename
+    }
+
+    const updatedCard = await BoardCard.findByIdAndUpdate(noteId, {
       $set: updateData
     },
       {
@@ -77,15 +77,18 @@ export async function updateCard(req, res) {
 }
 
 export async function deleteCard(req, res) {
-  const { cardId } = req.params
-  
+  const { noteId } = req.params
+
   try {
-    const card = await Note.findById(cardId)
+    const card = await BoardCard.findById(noteId)
     if (!card) return res.status(404).json({ error: "Card not found" })
 
-    await cloudinary.uploader.destroy(card.cloudinaryId)
-    const deletedCard = await Note.findByIdAndDelete(cardId)
-    
+    if (card.cardImageId) {
+      await cloudinary.uploader.destroy(card.cardImageId)
+    }
+
+    const deletedCard = await BoardCard.findByIdAndDelete(noteId)
+
     res.status(200).json({
       message: "Card sucessfully deleted",
       deletedCard

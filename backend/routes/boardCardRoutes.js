@@ -7,5 +7,5 @@ export const boardCardRouter = express.Router()
 
 
 boardCardRouter.post('/:canvasId', checkJwt, upload.single('image'), addCard)
-boardCardRouter.patch('/:canvasId/:noteId', checkJwt, updateCard)
+boardCardRouter.patch('/:canvasId/:noteId', checkJwt, upload.single('image'), updateCard)
 boardCardRouter.delete('/:canvasId/:noteId', checkJwt, deleteCard)

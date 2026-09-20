@@ -424,9 +424,10 @@ async function saveScreenshot() {
         y: minY - padding,
         width: (maxX - minX) + padding * 2,
         height: (maxY - minY) + padding * 2,
-        scale: 0.3,
+        scale: Math.min(window.devicePixelRatio || 1, 2),
         useCORS: true,
-        logging: false  // silence console noise
+        logging: false,
+        backgroundColor: '#f5f5f5'
     })
 
     screenshotCanvas.toBlob(async (blob) => {

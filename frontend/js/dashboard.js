@@ -48,6 +48,33 @@ function getPreviewMarkup() {
   `;
 }
 
+function formatEditedTime(value) {
+  const timestamp = new Date(value || Date.now()).getTime();
+
+  if (!Number.isFinite(timestamp)) {
+    return 'Edited just now';
+  }
+
+  const diffMinutes = Math.max(0, Math.round((Date.now() - timestamp) / 60000));
+
+  if (diffMinutes < 1) {
+    return 'Edited just now';
+  }
+
+  if (diffMinutes < 60) {
+    return `Edited ${diffMinutes} minute${diffMinutes === 1 ? '' : 's'} ago`;
+  }
+
+  const diffHours = Math.round(diffMinutes / 60);
+
+  if (diffHours < 24) {
+    return `Edited ${diffHours} hour${diffHours === 1 ? '' : 's'} ago`;
+  }
+
+  const diffDays = Math.round(diffHours / 24);
+  return `Edited ${diffDays} day${diffDays === 1 ? '' : 's'} ago`;
+}
+
 function createCardMarkup(item) {
   const pinActionLabel = item.pinned ? 'Unpin' : 'Pin';
 
@@ -72,22 +99,27 @@ function createCardMarkup(item) {
       </div>
       <div class="card-meta">
         <div class="card-title">${item.title}</div>
-        <div class="card-time">Edited 10 minutes ago</div>
+        <div class="card-time">${formatEditedTime(item.updatedAt || item.updated_at)}</div>
       </div>
     </article>
   `;
 }
 
 async function renderCards() {
-   let items;
-  if (dashboardKind === "note") {
+  let items;
+
+  if (dashboardKind === 'note') {
     items = await getNotes();
   } else {
     items = await getBoards();
   }
-  //Hehe, wahala
-  console.log(items);
-  // const items = getStoredItems();
+
+  items = [...items].sort((a, b) => {
+    const aTime = new Date(a.updatedAt || a.updated_at || 0).getTime();
+    const bTime = new Date(b.updatedAt || b.updated_at || 0).getTime();
+    return bTime - aTime;
+  });
+
   const pinnedItems = items.filter((item) => item.pinned);
   const otherItems = items.filter((item) => !item.pinned);
 

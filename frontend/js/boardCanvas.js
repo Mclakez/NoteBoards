@@ -7,14 +7,91 @@ const modalContent = document.querySelector('#modal-content');
 const modalClose = document.querySelector('#modal-close');
 const addPhotoButton = document.querySelector('.add-photo-button');
 const colourSwatches = document.querySelectorAll('.palette-swatch');
+const boardTitle = document.querySelector('#board-title');
+const boardName = document.querySelector('#board-name');
 
+const canvasId = new URLSearchParams(window.location.search).get('canvasId');
 const storageKey = 'noteboards-photo-board';
 const boardColourKey = 'noteboards-photo-board-colour';
 const maximumPhotos = 20;
-let cards = getStoredCards();
+let cards = [];
 let activeCardId = null;
 let dragState = null;
 let rotationState = null;
+let boardTitleSaveTimer = null;
+let lastSavedBoardTitle = '';
+let thumbnailTimer = null;
+
+function normalizeBoardTitle(value) {
+  const normalized = String(value ?? '').replace(/\s+/g, ' ').trim();
+  return normalized || 'Untitled board';
+}
+
+function syncBoardTitleDisplay(title) {
+  const displayTitle = normalizeBoardTitle(title);
+
+  if (boardTitle) {
+    boardTitle.textContent = displayTitle;
+  }
+
+  if (boardName && document.activeElement !== boardName) {
+    boardName.textContent = displayTitle;
+  }
+}
+
+async function persistBoardTitle(title) {
+  if (!canvasId) {
+    return;
+  }
+
+  const nextTitle = normalizeBoardTitle(title);
+
+  try {
+    const updatedBoard = await api.patch(`/boardCanvas/update/${canvasId}`, { title: nextTitle });
+    const savedTitle = updatedBoard?.title || nextTitle;
+    lastSavedBoardTitle = savedTitle;
+    syncBoardTitleDisplay(savedTitle);
+  } catch (error) {
+    console.error('Failed to save board title:', error);
+    syncBoardTitleDisplay(lastSavedBoardTitle || 'Untitled board');
+  }
+}
+
+function handleBoardTitleInput() {
+  if (!boardName) {
+    return;
+  }
+
+  const nextTitle = normalizeBoardTitle(boardName.textContent);
+  syncBoardTitleDisplay(nextTitle);
+
+  if (boardTitleSaveTimer) {
+    clearTimeout(boardTitleSaveTimer);
+  }
+
+  boardTitleSaveTimer = setTimeout(() => {
+    persistBoardTitle(nextTitle);
+  }, 250);
+}
+
+function setButtonLoading(button, isLoading, label = 'Loading...') {
+  if (!button) {
+    return;
+  }
+
+  const originalText = button.dataset.defaultText || button.textContent.trim();
+
+  button.dataset.defaultText = originalText;
+  button.disabled = isLoading;
+  button.classList.toggle('is-loading', isLoading);
+  button.setAttribute('aria-busy', String(isLoading));
+
+  if (isLoading) {
+    button.innerHTML = `<span class="button-spinner" aria-hidden="true"></span><span>${label}</span>`;
+  } else {
+    button.innerHTML = originalText;
+  }
+}
 
 function escapeHtml(value) {
   return String(value)
@@ -41,6 +118,40 @@ function getStoredCards() {
 
 function saveCards() {
   localStorage.setItem(storageKey, JSON.stringify(cards));
+}
+
+async function loadBoard() {
+  if (!canvasId) {
+    return;
+  }
+
+  setButtonLoading(addPhotoButton, true, 'Loading');
+
+  try {
+    const data = await api.get(`/boardCanvas/${canvasId}`);
+    const boardCards = data.notes || [];
+
+    cards = boardCards.map((card) => ({
+      id: card._id,
+      title: card.title || 'Untitled photo',
+      description: card.description || '',
+      image: card.cardImageUrl || '',
+      x: Number(card.x ?? 50),
+      y: Number(card.y ?? 50),
+      rotation: Number(card.rotation ?? 0),
+      zIndex: Number(card.z_index ?? 1),
+    }));
+
+    if (data.canvas?.title) {
+      const title = data.canvas.title;
+      lastSavedBoardTitle = title;
+      syncBoardTitleDisplay(title);
+    }
+
+    renderCards();
+  } finally {
+    setButtonLoading(addPhotoButton, false, '+');
+  }
 }
 
 function getBoardColour() {
@@ -142,6 +253,8 @@ function getCardById(cardId) {
   return cards.find((card) => card.id === cardId);
 }
 
+
+
 function openModal(contentMarkup) {
   modalContent.innerHTML = contentMarkup;
   modalBackdrop.hidden = false;
@@ -227,6 +340,7 @@ function displaySelectedImage(file) {
   fileReader.addEventListener('load', () => {
     imageField.innerHTML = `<img class="modal-image-preview" src="${fileReader.result}" alt="Selected photo preview" />`;
     imageField.dataset.image = fileReader.result;
+    imageField.dataset.fileName = file.name || 'upload-image';
   });
 
   fileReader.readAsDataURL(file);
@@ -240,46 +354,139 @@ function handlePhotoFileSelection(event) {
   }
 }
 
-function savePhoto(event) {
+async function saveScreenshot() {
+  const cards = photoBoard.querySelectorAll('.polaroid-card');
+
+  if (!photoBoard || !canvasId || cards.length === 0) {
+    return;
+  }
+
+  const boardRect = photoBoard.getBoundingClientRect();
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+
+  cards.forEach((card) => {
+    const cardRect = card.getBoundingClientRect();
+    const left = cardRect.left - boardRect.left;
+    const top = cardRect.top - boardRect.top;
+    const right = left + cardRect.width;
+    const bottom = top + cardRect.height;
+
+    minX = Math.min(minX, left);
+    minY = Math.min(minY, top);
+    maxX = Math.max(maxX, right);
+    maxY = Math.max(maxY, bottom);
+  });
+
+  const padding = 40;
+
+  const screenshotCanvas = await html2canvas(photoBoard, {
+    x: minX - padding,
+    y: minY - padding,
+    width: Math.max(1, maxX - minX + (padding * 2)),
+    height: Math.max(1, maxY - minY + (padding * 2)),
+    scale: Math.min(window.devicePixelRatio || 1, 2),
+    useCORS: true,
+    logging: false,
+    backgroundColor: '#f5f5f5',
+  });
+
+  screenshotCanvas.toBlob(async (blob) => {
+    if (!blob) {
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('thumbnail', blob, 'board-thumbnail.png');
+
+    try {
+      await api.post(`/boardCanvas/${canvasId}/thumbnail`, formData);
+    } catch (error) {
+      console.error('Board thumbnail save failed:', error);
+    }
+  }, 'image/png');
+}
+
+function scheduleScreenshotTimer() {
+  clearTimeout(thumbnailTimer);
+  thumbnailTimer = setTimeout(async () => {
+    try {
+      await saveScreenshot();
+      console.log('Board thumbnail updated in Cloudinary');
+    } catch (error) {
+      console.error('Failed to auto-save board thumbnail:', error);
+    }
+  }, 1000);
+}
+
+async function savePhoto(event) {
   event.preventDefault();
+
+  if (!canvasId) {
+    return;
+  }
 
   const titleInput = modalContent.querySelector('#photo-title');
   const descriptionInput = modalContent.querySelector('#photo-description');
   const imageField = modalContent.querySelector('#image-field');
-  const image = imageField.dataset.image || getCardById(activeCardId)?.image;
+  const selectedFile = modalContent.querySelector('#photo-input')?.files?.[0];
+  const existingImage = getCardById(activeCardId)?.image;
+  const imageDataUrl = imageField?.dataset.image;
+  const submitButton = modalContent.querySelector('.modal-button[type="submit"]');
 
-  if (!image) {
+  if (!selectedFile && !existingImage && !imageDataUrl) {
     modalContent.querySelector('.upload-area')?.focus();
     return;
   }
 
-  if (activeCardId) {
-    const existingCard = getCardById(activeCardId);
-    existingCard.title = titleInput.value.trim();
-    existingCard.description = descriptionInput.value.trim();
-    existingCard.image = image;
-  } else {
-    const position = getNextPosition();
-    cards.push({
-      id: crypto.randomUUID(),
-      title: titleInput.value.trim(),
-      description: descriptionInput.value.trim(),
-      image,
-      ...position,
-      zIndex: getHighestZIndex() + 1,
-    });
-  }
+  setButtonLoading(submitButton, true, 'Saving...');
 
-  saveCards();
-  renderCards();
-  closeModal();
+  try {
+    const formData = new FormData();
+    formData.append('title', titleInput.value.trim());
+    formData.append('description', descriptionInput.value.trim());
+
+    if (selectedFile) {
+      formData.append('image', selectedFile);
+    } else if (imageDataUrl && imageDataUrl.startsWith('data:image/')) {
+      const response = await fetch(imageDataUrl);
+      const blob = await response.blob();
+      const fileName = imageField.dataset.fileName || 'board-photo.png';
+      formData.append('image', blob, fileName);
+    }
+
+    if (activeCardId) {
+      await api.patch(`/boardCard/${canvasId}/${activeCardId}`, formData);
+    } else {
+      await api.post(`/boardCard/${canvasId}`, formData);
+    }
+
+    await loadBoard();
+    scheduleScreenshotTimer();
+    closeModal();
+  } finally {
+    setButtonLoading(submitButton, false, 'SAVE');
+  }
 }
 
-function deletePhoto() {
-  cards = cards.filter((card) => card.id !== activeCardId);
-  saveCards();
-  renderCards();
-  closeModal();
+async function deletePhoto() {
+  if (!canvasId || !activeCardId) {
+    return;
+  }
+
+  const deleteButton = modalContent.querySelector('#delete-photo-button');
+  setButtonLoading(deleteButton, true, 'Deleting...');
+
+  try {
+    await api.delete(`/boardCard/${canvasId}/${activeCardId}`);
+    await loadBoard();
+    scheduleScreenshotTimer();
+    closeModal();
+  } finally {
+    setButtonLoading(deleteButton, false, 'DELETE');
+  }
 }
 
 function setupPhotoForm() {
@@ -362,13 +569,24 @@ function dragCard(event) {
   dragState.hasMoved = true;
 }
 
-function stopDraggingCard() {
+async function stopDraggingCard() {
   if (!dragState) {
     return;
   }
 
   dragState.cardElement.classList.remove('dragging');
-  saveCards();
+
+  const { card } = dragState;
+
+  if (canvasId && card?.id) {
+    await api.patch(`/boardCard/${canvasId}/${card.id}`, {
+      x: card.x,
+      y: card.y,
+      z_index: card.zIndex,
+    });
+    scheduleScreenshotTimer();
+  }
+
   setTimeout(() => {
     dragState = null;
   }, 0);
@@ -422,21 +640,32 @@ function rotateCard(event) {
   rotationState.cardElement.style.setProperty('--card-rotation', `${newRotation}deg`);
 }
 
-function stopRotatingCard() {
+async function stopRotatingCard() {
   if (!rotationState) {
     return;
   }
 
   rotationState.cardElement.classList.remove('rotating');
-  saveCards();
+
+  const { card } = rotationState;
+
+  if (canvasId && card?.id) {
+    await api.patch(`/boardCard/${canvasId}/${card.id}`, {
+      rotation: card.rotation,
+      z_index: card.zIndex,
+    });
+    scheduleScreenshotTimer();
+  }
+
   setTimeout(() => {
     rotationState = null;
   }, 0);
 }
 
-function initializeBoard() {
+async function initializeBoard() {
   setBoardColour(getBoardColour());
-  renderCards();
+  await loadBoard();
+  scheduleScreenshotTimer();
   addPhotoButton.addEventListener('click', openCreateModal);
   modalClose.addEventListener('click', closeModal);
   modalBackdrop.addEventListener('click', (event) => {
@@ -444,6 +673,20 @@ function initializeBoard() {
       closeModal();
     }
   });
+
+  if (boardName) {
+    boardName.addEventListener('input', handleBoardTitleInput);
+    boardName.addEventListener('blur', () => {
+      if (boardTitleSaveTimer) {
+        clearTimeout(boardTitleSaveTimer);
+      }
+
+      const finalTitle = normalizeBoardTitle(boardName.textContent);
+      syncBoardTitleDisplay(finalTitle);
+      persistBoardTitle(finalTitle);
+    });
+  }
+
   colourSwatches.forEach((swatch) => {
     swatch.addEventListener('click', () => setBoardColour(swatch.dataset.boardColor));
   });
