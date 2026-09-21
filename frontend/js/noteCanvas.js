@@ -23,6 +23,22 @@ function isMobileCanvas() {
     return window.innerWidth <= 768;
 }
 
+function isPointerOnScrollbar(event) {
+    const rect = viewport.getBoundingClientRect();
+    const scrollbarSize = 16;
+
+    const hasVerticalScrollbar = viewport.scrollHeight > viewport.clientHeight;
+    const hasHorizontalScrollbar = viewport.scrollWidth > viewport.clientWidth;
+
+    const nearRightEdge = event.clientX >= rect.right - scrollbarSize;
+    const nearBottomEdge = event.clientY >= rect.bottom - scrollbarSize;
+
+    return (
+        (hasVerticalScrollbar && nearRightEdge) ||
+        (hasHorizontalScrollbar && nearBottomEdge)
+    );
+}
+
 function clampCardToCanvas(cardElement) {
     if (!cardElement || !canvas) {
         return;
@@ -95,8 +111,7 @@ viewport.addEventListener('pointerdown', (e) => {
     if (e.target.closest('.btns_container')) return
     if (e.target.closest('article')) return
     if (e.target.closest('.note_wrapper')) return
-    if (e.target.closest('.btns_container')) return
-    if (e.target.closest('article')) return
+    if (isPointerOnScrollbar(e)) return
     const cards = document.querySelectorAll('.note_wrapper')
     cards.forEach(card => {
         card.classList.remove('selected')
