@@ -1,5 +1,10 @@
 const BASE_URL = "http://localhost:5000/api"
 
+function clearAuthSession() {
+    localStorage.removeItem('noteboards-user')
+    document.cookie = 'token=; Max-Age=0; path=/; SameSite=Lax'
+}
+
 function redirectToLoginPage() {
     const isLoginPage = window.location.pathname.endsWith('/login.html')
 
@@ -7,8 +12,8 @@ function redirectToLoginPage() {
         return
     }
 
-    localStorage.removeItem('noteboards-user')
-    window.location.href = './login.html'
+    clearAuthSession()
+    window.location.replace('./login.html')
 }
 
 export const api = {
@@ -39,7 +44,7 @@ const request = async(endpoint, method = 'GET', body = null) => {
     const data = contentType.includes('application/json') ? await res.json() : {}
 
     if (!res.ok) {
-        const message = data.message || ''
+        const message = data.message || data.error || ''
 
         if (res.status === 401 || res.status === 403 || /jwt|token/i.test(message)) {
             redirectToLoginPage()

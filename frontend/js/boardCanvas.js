@@ -103,23 +103,6 @@ function escapeHtml(value) {
     .replaceAll("'", '&#039;');
 }
 
-function getStoredCards() {
-  const storedCards = localStorage.getItem(storageKey);
-
-  if (!storedCards) {
-    return [];
-  }
-
-  try {
-    return JSON.parse(storedCards);
-  } catch {
-    return [];
-  }
-}
-
-function saveCards() {
-  localStorage.setItem(storageKey, JSON.stringify(cards));
-}
 
 async function loadBoard() {
   if (!canvasId) {

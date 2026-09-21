@@ -8,6 +8,8 @@ import { boardCardRouter } from './routes/boardCardRoutes.js'
 import { boardCanvasRouter } from './routes/boardCanvasRoutes.js'
 import cookieParser from 'cookie-parser'
 import cors from 'cors'
+import { configurePassport } from './config/passport.js';
+import passport from 'passport'
 
 
 initDB()
@@ -15,10 +17,14 @@ initDB()
 const app = express()
 const PORT = 5000
 
+app.use(passport.initialize())
+configurePassport()
+
 app.use(cors({
     origin: 'http://127.0.0.1:5500',
     credentials: true
 }))
+
 
 app.use(express.json())
 app.use(cookieParser())

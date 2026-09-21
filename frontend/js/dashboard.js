@@ -7,7 +7,6 @@ const dashboardTitle = dashboardKind === 'board' ? 'My handsome face' : 'Trip to
 const pinnedCardGrid = document.querySelector('.pinned .card-grid');
 const otherCardGrid = document.querySelector('.other-section .card-grid');
 const dashboardToast = document.querySelector('.toast');
-const dashboardStorageKey = `noteboards-${dashboardKind}s`;
 let dashboardToastTimer;
 
 function getInitialsFromName(name = '') {
@@ -35,19 +34,6 @@ function initializeUserAvatar() {
 
   const savedUserName = localStorage.getItem('noteboards-user') || 'NoteBoards';
   avatarButton.textContent = getInitialsFromName(savedUserName);
-}
-
-function getDefaultItems() {
-  return [
-    { pinned: true, name: dashboardTitle },
-    { pinned: true, name: dashboardTitle },
-    { pinned: true, name: dashboardTitle },
-    { pinned: true, name: dashboardTitle },
-    { pinned: false, name: dashboardTitle },
-    { pinned: false, name: dashboardTitle },
-    { pinned: false, name: dashboardTitle },
-    { pinned: false, name: dashboardTitle },
-  ];
 }
 
 async function getNotes() {
@@ -172,42 +158,17 @@ function closeAllCardMenus() {
   });
 }
 
-function getCardItem(cardElement) {
-  return {
-    name: cardElement.dataset.name,
-    pinned: cardElement.dataset.pinned === 'true',
-  };
-}
-
-// async function updateCardItem(cardElement, updateItem) {
-//   const matchingItem = getCardItem(cardElement);
-//   const items = getStoredItems();
-//   const itemIndex = items.findIndex((item) => (
-//     item.name === matchingItem.name && item.pinned === matchingItem.pinned
-//   ));
-
-//   if (itemIndex !== -1) {
-//     updateItem(items, itemIndex);
-//     saveItems(items);
-//     await renderCards();
-//   }
-// }
-
 async function toggleCardPin(cardId, cardPin) {
-  // updateCardItem(cardElement, (items, itemIndex) => {
-  //   items[itemIndex].pinned = !items[itemIndex].pinned;
-  // });
 
   if(dashboardKind === "note") {
     const pinnedCard = await api.patch(`/noteCanvas/update/${cardId}`, {
     pinned: !cardPin
   })
-  console.log(pinnedCard)
+  
   } else {
    const pinnedCard = await api.patch(`/boardCanvas/update/${cardId}`, {
     pinned: !cardPin
   })
-  console.log(pinnedCard)
   }
   await renderCards()
 
@@ -222,9 +183,6 @@ async function deleteCard(cardId) {
     const deletedCard = await api.delete(`/boardCanvas/${cardId}`)
   }
   
-  // updateCardItem(cardElement, (items, itemIndex) => {
-  //   items.splice(itemIndex, 1);
-  // });
   await renderCards()
   showDashboardToast(`${dashboardNoun} deleted.`);
 }
@@ -256,7 +214,6 @@ async function handleCardAction(event) {
   const cardElement = actionButton.closest('.dashboard-card');
   const cardId = cardElement.dataset.id
   const cardPin = cardElement.dataset.pinned === "true"
-  console.log(cardPin);
   
 
   if (actionButton.dataset.action === 'pin') {

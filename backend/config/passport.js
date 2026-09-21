@@ -1,7 +1,6 @@
 import passport from 'passport'
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20'
-import { User } from '../models/Users.js'
-
+import { User } from '../models/User.js'
 
 export async function configurePassport() {
     passport.use(

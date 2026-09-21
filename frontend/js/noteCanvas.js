@@ -11,11 +11,8 @@ let thumbnailTimer = null
 let selectedCardId = null;
 let currentCard;
 let offsetX, offsetY;
-let canvasOffsetX, canvasOffsetY;
 let translateX = 0
 let translateY = 0
-let panStartMouseX, panStartMouseY;
-let panStartTranslateX, panStartTranslateY;
 let panStartScrollLeft, panStartScrollTop;
 let isDragging = false
 let isPanning = false
@@ -47,6 +44,7 @@ function clampCardToCanvas(cardElement) {
 viewport.scrollLeft = (10000 - window.innerWidth) / 2
 viewport.scrollTop = (10000 - window.innerHeight) / 2
 
+//Get all the notes and canvas data
 async function loadNotes() {
     const data = await api.get(`/noteCanvas/${canvasId}`)
     title.textContent = data.canvas.title

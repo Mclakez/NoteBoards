@@ -1,5 +1,6 @@
 
 import { api } from "./api.js";
+const BASE_URL = "http://127.0.0.1:5500"
 
 const authToast = document.querySelector('.toast');
 let authToastTimer;
@@ -7,7 +8,6 @@ let authToastTimer;
 function showAuthToast(message, type) {
   authToast.textContent = message;
   authToast.className = `toast show ${type}`;
-
   clearTimeout(authToastTimer);
   authToastTimer = setTimeout(hideAuthToast, 3800);
 }
@@ -79,7 +79,6 @@ function togglePasswordVisibility(event) {
 function validateFieldOnBlur(event) {
   const input = event.currentTarget;
   const form = input.form;
-  //What does this mean
   const passwordValue = form.elements.password.value;
 
   setFieldError(input, validateInput(input, passwordValue));

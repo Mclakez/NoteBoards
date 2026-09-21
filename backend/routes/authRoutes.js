@@ -1,6 +1,7 @@
 import express from 'express'
 import {signup, login, logout} from '../controllers/authControllers.js'
 import passport from 'passport'
+import { generateWebToken } from '../config/jwt.js'
 
 export const authRouter = express.Router()
 
@@ -12,15 +13,14 @@ authRouter.get('/google/callback', passport.authenticate('google', {session: fal
 async (req, res) => {
         try {
             const user = req.user
-            const token = await generateToken(user)
-            console.log('Google token:', token)
+            const token = generateWebToken(user)
             res.cookie("token", token, {
                 httpOnly: true,
                 secure: true,
                 sameSite: 'none',
                 maxAge: 7*24*60*60*1000
             })
-             res.redirect(`${process.env.CLIENT_URL}/auth-success`)
+             res.redirect(`${process.env.CLIENT_URL}/auth-success.html`)
         } catch (error) {
             console.error('Google callback error:', error)
              res.redirect(`${process.env.CLIENT_URL}/login?error=auth_failed`)

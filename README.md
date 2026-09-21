@@ -300,6 +300,123 @@ This keeps the board preview consistent with the note canvas and makes the board
 
 ---
 
+## 7) JWT expiry redirect to login
+
+### Problem
+When the server rejected an expired or invalid JWT, the frontend stayed on the protected dashboard instead of sending the user back to the login screen.
+
+### Before
+```js
+if (!res.ok) {
+  const message = data.message || ''
+
+  if (res.status === 401 || res.status === 403 || /jwt|token/i.test(message)) {
+    redirectToLoginPage()
+  }
+
+  throw new Error(message || 'Something went wrong')
+}
+```
+
+### After
+```js
+function clearAuthSession() {
+  localStorage.removeItem('noteboards-user')
+  document.cookie = 'token=; Max-Age=0; path=/; SameSite=Lax'
+}
+
+function redirectToLoginPage() {
+  const isLoginPage = window.location.pathname.endsWith('/login.html')
+
+  if (isLoginPage) {
+    return
+  }
+
+  clearAuthSession()
+  window.location.replace('./login.html')
+}
+```
+
+### Why this was needed
+Protected pages should never remain accessible after a session expires. Clearing stale auth state and redirecting to login keeps the user flow secure and predictable.
+
+---
+
+## 8) Google OAuth callback repair and success redirect
+
+### Problem
+The Google authentication flow was failing because the backend was importing the wrong model file and calling the wrong JWT helper name.
+
+### Before
+```js
+import { User } from '../models/Users.js'
+```
+
+```js
+const token = await generateToken(user)
+```
+
+### After
+```js
+import { User } from '../models/User.js'
+import { generateWebToken } from '../config/jwt.js'
+```
+
+```js
+const token = generateWebToken(user)
+res.cookie('token', token, {
+  httpOnly: true,
+  secure: true,
+  sameSite: 'none',
+  maxAge: 7 * 24 * 60 * 60 * 1000
+})
+res.redirect(`${process.env.CLIENT_URL}/auth-success.html`)
+```
+
+### Why this was needed
+The OAuth callback must generate a valid cookie-backed JWT and then redirect the user into the app. Without this, Google sign-in cannot complete successfully.
+
+---
+
+## 9) Avatar initials from the signed-in username
+
+### Problem
+The user avatar on the dashboard was hardcoded to `AF`, so it did not reflect the actual signed-in account.
+
+### Before
+```html
+<button class="avatar" aria-label="User profile">AF</button>
+```
+
+### After
+```js
+function getInitialsFromName(name = '') {
+  const cleanName = name.trim();
+
+  if (!cleanName) {
+    return 'NB';
+  }
+
+  const nameParts = cleanName.split(/\s+/).filter(Boolean);
+
+  if (nameParts.length === 1) {
+    return nameParts[0].slice(0, 2).toUpperCase();
+  }
+
+  return `${nameParts[0][0]}${nameParts[nameParts.length - 1][0]}`.toUpperCase();
+}
+```
+
+```js
+const savedUserName = localStorage.getItem('noteboards-user') || 'NoteBoards';
+avatarButton.textContent = getInitialsFromName(savedUserName);
+```
+
+### Why this was needed
+The profile circle should reflect the user identity in a lightweight, reusable way without needing a profile image upload for every account.
+
+---
+
 ## Summary
 
 Across this chat, the key improvements were:
@@ -310,6 +427,9 @@ Across this chat, the key improvements were:
 - sorted dashboard cards by the actual last-edited timestamp
 - replaced static “Edited 10 minutes ago” text with real relative times
 - added board screenshot thumbnail generation, consistent with the note canvas workflow
+- redirected expired or invalid JWT sessions back to login automatically
+- repaired the Google OAuth callback flow and added a successful redirect page
+- replaced the hardcoded avatar initials with the signed-in user’s initials
 
 These changes together make the board experience much more consistent and production-ready.
 
