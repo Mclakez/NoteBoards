@@ -48,7 +48,7 @@ async function getBoards() {
 
 function getPreviewMarkup() {
   if (dashboardKind === 'board') {
-    return '';
+    return '<div class="board-preview board-placeholder" aria-hidden="true"></div>';;
   }
 
   return `
