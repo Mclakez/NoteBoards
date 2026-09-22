@@ -1,6 +1,6 @@
 
 import { api } from "./api.js";
-const BASE_URL = "https://noteboards.onrender.com"
+const BASE_URL = "https://noteboards.onrender.com/."
 
 const authToast = document.querySelector('.toast');
 let authToastTimer;

@@ -1,4 +1,4 @@
-const BASE_URL = "https://noteboards.onrender.com"
+const BASE_URL = "https://noteboards.onrender.com/api"
 
 function clearAuthSession() {
     localStorage.removeItem('noteboards-user')
