@@ -1,6 +1,6 @@
 
 import { api } from "./api.js";
-const BASE_URL = "https://noteboards.onrender.com/."
+const BASE_URL = "https://noteboards.onrender.com/api"
 
 const authToast = document.querySelector('.toast');
 let authToastTimer;
@@ -130,8 +130,7 @@ async function handleAuthSubmit(event) {
   const body = Object.fromEntries(formData.entries())
 
   if (isRegistration) {
-    const register = await api.post('/auth/signup', body)
-    console.log(register);
+    await api.post('/api/auth/signup', body)
 
     if (body.username) {
       localStorage.setItem('noteboards-user', body.username);
@@ -142,10 +141,7 @@ async function handleAuthSubmit(event) {
     form.reset();
      setTimeout(redirectToLogin, 900);
   } else {
-    console.log("Login button");
-    
-    const login = await api.post('/auth/login', body)
-    console.log(login);
+    const login = await api.post('/api/auth/login', body)
 
     const loggedInUser = login?.username || body.username;
     if (loggedInUser) {
