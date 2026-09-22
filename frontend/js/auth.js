@@ -130,7 +130,7 @@ async function handleAuthSubmit(event) {
   const body = Object.fromEntries(formData.entries())
 
   if (isRegistration) {
-    await api.post('/api/auth/signup', body)
+    await api.post('/auth/signup', body)
 
     if (body.username) {
       localStorage.setItem('noteboards-user', body.username);
@@ -141,7 +141,7 @@ async function handleAuthSubmit(event) {
     form.reset();
      setTimeout(redirectToLogin, 900);
   } else {
-    const login = await api.post('/api/auth/login', body)
+    const login = await api.post('/auth/login', body)
 
     const loggedInUser = login?.username || body.username;
     if (loggedInUser) {
