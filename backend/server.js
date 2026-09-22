@@ -15,13 +15,24 @@ import passport from 'passport'
 initDB()
 
 const app = express()
-const PORT = 5000
+const PORT = process.env.PORT || 5000
 
 app.use(passport.initialize())
 configurePassport()
 
+const allowedOrigins = [
+  'https://note-boards.vercel.app',
+  'http://127.0.0.1:5500'
+]
+
 app.use(cors({
-    origin: 'http://127.0.0.1:5500',
+    origin: function(origin, callback) {
+      if(!origin || allowedOrigins.includes(origin)) {
+       callback(null, true) 
+      } else {
+        callback(new Error('Not allowed by CORS'))
+      }
+    },
     credentials: true
 }))
 
