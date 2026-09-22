@@ -112,10 +112,30 @@ function redirectToLogin() {
   window.location.href = './login.html';
 }
 
+function setButtonLoading(button, isLoading, label = 'Loading...') {
+  if (!button) {
+    return;
+  }
+
+  const defaultLabel = button.dataset.defaultLabel || button.textContent.trim();
+  button.dataset.defaultLabel = defaultLabel;
+  button.disabled = isLoading;
+  button.classList.toggle('is-loading', isLoading);
+  button.setAttribute('aria-busy', String(isLoading));
+
+  if (isLoading) {
+    button.innerHTML = `<span class="button-spinner" aria-hidden="true"></span><span>${label}</span>`;
+    return;
+  }
+
+  button.innerHTML = defaultLabel;
+}
+
 async function handleAuthSubmit(event) {
   event.preventDefault();
 
   const form = event.currentTarget;
+  const submitButton = form.querySelector('button[type="submit"]');
   const formIsValid = validateForm(form);
 
   if (!formIsValid) {
@@ -124,46 +144,65 @@ async function handleAuthSubmit(event) {
     return;
   }
 
-  let message = ''
   const isRegistration = form.dataset.authForm === 'register';
-  const formData = new FormData(form)
-  const body = Object.fromEntries(formData.entries())
+  const loadingLabel = isRegistration ? 'Creating your account...' : 'Signing you in...';
+  const defaultLabel = isRegistration ? 'Create account' : 'Sign in';
+  const formData = new FormData(form);
+  const body = Object.fromEntries(formData.entries());
 
-  if (isRegistration) {
-    await api.post('/auth/signup', body)
+  setButtonLoading(submitButton, true, loadingLabel);
+  showAuthToast(loadingLabel, 'success');
 
-    if (body.username) {
-      localStorage.setItem('noteboards-user', body.username);
+  try {
+    if (isRegistration) {
+      await api.post('/auth/signup', body);
+
+      if (body.username) {
+        localStorage.setItem('noteboards-user', body.username);
+      }
+
+      form.reset();
+      showAuthToast('Account created successfully. Redirecting to sign in…', 'success');
+      setTimeout(redirectToLogin, 900);
+      return;
     }
-    
-    message = 'Account created successfully. Opening Notes…'
-    showAuthToast(message, 'success');
-    form.reset();
-     setTimeout(redirectToLogin, 900);
-  } else {
-    const login = await api.post('/auth/login', body)
 
+    const login = await api.post('/auth/login', body);
     const loggedInUser = login?.username || body.username;
+
     if (loggedInUser) {
       localStorage.setItem('noteboards-user', loggedInUser);
     }
-    
-    message = 'Signed in successfully. Opening Notes…';
-    showAuthToast(message, 'success');
-    form.reset();
-    setTimeout(redirectToNotes, 900);
-  }
-  
 
-  
- 
+    form.reset();
+    showAuthToast('Signed in successfully. Opening Notes…', 'success');
+    setTimeout(redirectToNotes, 900);
+  } catch (error) {
+    const errorMessage = error.message || (isRegistration ? 'Unable to create your account right now.' : 'Unable to sign you in right now.');
+    showAuthToast(errorMessage, 'error');
+  } finally {
+    setButtonLoading(submitButton, false, defaultLabel);
+  }
 }
 
 function handleProviderClick(event) {
-  const provider = event.currentTarget.dataset.provider;
-  handleGoogleSignup()
+  const providerButton = event.currentTarget;
+  const providerName = providerButton.dataset.provider || 'Google';
+  const providerLabel = providerName === 'google' ? 'Google' : providerName;
+  const fallbackTimer = setTimeout(() => {
+    if (!document.hidden) {
+      setButtonLoading(providerButton, false, providerLabel);
+      showAuthToast('The sign-in server is not responding right now. Please try again in a moment.', 'error');
+    }
+  }, 12000);
 
-  showAuthToast(`${provider} sign-in `);
+  setButtonLoading(providerButton, true, `Connecting to ${providerLabel}...`);
+  showAuthToast(`Connecting to ${providerLabel}...`, 'success');
+  handleGoogleSignup();
+
+  window.addEventListener('pageshow', () => {
+    clearTimeout(fallbackTimer);
+  }, { once: true });
 }
 
 function initializeAuthPage() {
